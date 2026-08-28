@@ -2,8 +2,8 @@
 
 import 'dart:math';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -541,8 +541,12 @@ abstract class Result<T> with _$Result<T> {
     @Default(false) bool needRestart,
   }) = _Result;
 
-  factory Result.success(T data, {bool needRestart = false}) =>
-      Result(data: data, type: ResultType.success, message: '', needRestart: needRestart);
+  factory Result.success(T data, {bool needRestart = false}) => Result(
+    data: data,
+    type: ResultType.success,
+    message: '',
+    needRestart: needRestart,
+  );
 
   factory Result.error(String message) =>
       Result(data: null, type: ResultType.error, message: message);
@@ -564,7 +568,11 @@ abstract class Script with _$Script {
     @JsonKey(name: 'custom-options') Map<String, bool>? customOptions,
   }) = _Script;
 
-  factory Script.create({required String label, required String content, String? url}) {
+  factory Script.create({
+    required String label,
+    required String content,
+    String? url,
+  }) {
     return Script(id: utils.uuidV4, label: label, content: content, url: url);
   }
 
@@ -572,8 +580,8 @@ abstract class Script with _$Script {
 }
 
 extension ScriptExt on Script {
-  bool get isCompatibleWithBettbox {
+  bool get isCompatibleWithKitonyBox {
     final head = content.length > 2000 ? content.substring(0, 2000) : content;
-    return head.contains('Compatible_With_Bettbox');
+    return head.contains('Compatible_With_KitonyBox');
   }
 }

@@ -1,15 +1,15 @@
 import 'dart:ui';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/pages/editor.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/views/profiles/edit_profile.dart';
-import 'package:bett_box/views/profiles/override_profile.dart';
-import 'package:bett_box/views/profiles/scripts.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/pages/editor.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/views/profiles/edit_profile.dart';
+import 'package:kitony_box/views/profiles/override_profile.dart';
+import 'package:kitony_box/views/profiles/scripts.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -246,11 +246,7 @@ class ProfileItem extends StatelessWidget {
           content: content,
           readOnly: true,
         );
-        BaseNavigator.push<String>(
-          context,
-          previewPage,
-          maintainState: false,
-        );
+        BaseNavigator.push<String>(context, previewPage, maintainState: false);
       },
       needLoading: true,
       title: appLocalizations.tip,
@@ -315,10 +311,7 @@ class ProfileItem extends StatelessWidget {
           style: context.textTheme.labelMedium?.toLight,
         ),
       ] else
-        Text(
-          updateTimeText,
-          style: context.textTheme.labelMedium?.toLight,
-        ),
+        Text(updateTimeText, style: context.textTheme.labelMedium?.toLight),
     ];
   }
 

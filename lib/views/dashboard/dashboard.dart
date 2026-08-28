@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/state.dart';
 
 import 'package:defer_pointer/defer_pointer.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -128,8 +128,7 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
           ),
         ),
       ),
-      if (showStartSwitch)
-        _DashboardStartSwitch(key: _startSwitchKey),
+      if (showStartSwitch) _DashboardStartSwitch(key: _startSwitchKey),
     ];
   }
 
@@ -445,7 +444,7 @@ class _DashboardTitleDialogState extends State<_DashboardTitleDialog> {
         child: TextField(
           controller: _controller,
           decoration: InputDecoration(
-            hintText: 'Have fun with Bettbox',
+            hintText: 'Have fun with KitonyBox',
             errorText: _errorText,
             border: const OutlineInputBorder(),
           ),
@@ -485,8 +484,7 @@ class _DashboardStartSwitchState extends ConsumerState<_DashboardStartSwitch> {
   }
 
   void _onFocusChange() {
-    globalState.isDashboardStartSwitchFocused =
-        _focusNode?.hasFocus ?? false;
+    globalState.isDashboardStartSwitchFocused = _focusNode?.hasFocus ?? false;
   }
 
   void requestFocus() {

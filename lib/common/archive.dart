@@ -9,7 +9,10 @@ extension ArchiveExt on Archive {
     final dir = Directory(dirPath);
     final entities = await dir.list(recursive: false).toList();
     for (final entity in entities) {
-      final relativePath = relative(entity.path, from: parentPath).replaceAll('\\', '/');
+      final relativePath = relative(
+        entity.path,
+        from: parentPath,
+      ).replaceAll('\\', '/');
       if (entity is File) {
         final data = await entity.readAsBytes();
         final archiveFile = ArchiveFile(relativePath, data.length, data);

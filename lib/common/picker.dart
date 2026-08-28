@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:bett_box/common/common.dart';
+import 'package:kitony_box/common/common.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -12,7 +12,8 @@ class Picker {
     bool allowMultiple = true,
     List<String>? allowedExtensions,
   }) async {
-    final useCustom = !system.isAndroid &&
+    final useCustom =
+        !system.isAndroid &&
         allowedExtensions != null &&
         allowedExtensions.isNotEmpty;
     final filePickerResult = await FilePicker.platform.pickFiles(
@@ -49,7 +50,8 @@ class Picker {
         name = '$name.${allowedExtensions.first}';
       }
     }
-    final useCustom = !system.isAndroid &&
+    final useCustom =
+        !system.isAndroid &&
         allowedExtensions != null &&
         allowedExtensions.isNotEmpty;
     final path = await FilePicker.platform.saveFile(

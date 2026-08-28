@@ -1,24 +1,24 @@
 import 'dart:convert';
 
-import 'package:bett_box/clash/clash.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/pages/editor.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/card.dart';
-import 'package:bett_box/widgets/dialog.dart';
-import 'package:bett_box/widgets/icon.dart';
-import 'package:bett_box/widgets/input.dart';
-import 'package:bett_box/widgets/list.dart';
-import 'package:bett_box/widgets/null_status.dart';
-import 'package:bett_box/widgets/pop_scope.dart';
-import 'package:bett_box/widgets/popup.dart';
-import 'package:bett_box/widgets/scaffold.dart';
-import 'package:bett_box/widgets/scroll.dart';
-import 'package:bett_box/widgets/sheet.dart';
-import 'package:bett_box/widgets/text.dart';
+import 'package:kitony_box/clash/clash.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/pages/editor.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/card.dart';
+import 'package:kitony_box/widgets/dialog.dart';
+import 'package:kitony_box/widgets/icon.dart';
+import 'package:kitony_box/widgets/input.dart';
+import 'package:kitony_box/widgets/list.dart';
+import 'package:kitony_box/widgets/null_status.dart';
+import 'package:kitony_box/widgets/pop_scope.dart';
+import 'package:kitony_box/widgets/popup.dart';
+import 'package:kitony_box/widgets/scaffold.dart';
+import 'package:kitony_box/widgets/scroll.dart';
+import 'package:kitony_box/widgets/sheet.dart';
+import 'package:kitony_box/widgets/text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -74,10 +74,9 @@ Future<void> showScriptCustomOptions(
         final cached = JavaScriptRuntimeManager.getCachedOptions(
           script.content,
         );
-        final data = cached ??
-            await JavaScriptRuntimeManager.extractScriptOptions(
-              script.content,
-            );
+        final data =
+            cached ??
+            await JavaScriptRuntimeManager.extractScriptOptions(script.content);
         final (options, icons) = _processScriptData(data, script);
 
         final targetDuration = cached != null
@@ -130,13 +129,10 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
   }
 
   Future<void> _handleSyncScript(String id) async {
-    await globalState.appController.safeRun(
-      silence: false,
-      () async {
-        await ref.read(scriptStateProvider.notifier).syncScript(id);
-        globalState.showNotifier(appLocalizations.success);
-      },
-    );
+    await globalState.appController.safeRun(silence: false, () async {
+      await ref.read(scriptStateProvider.notifier).syncScript(id);
+      globalState.showNotifier(appLocalizations.success);
+    });
   }
 
   Future<void> _handleCustomOptions(Script script) async {
@@ -188,9 +184,13 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
                       value: isSelected,
                       onChanged: (value) {
                         if (value) {
-                          ref.read(scriptStateProvider.notifier).setId(script.id);
+                          ref
+                              .read(scriptStateProvider.notifier)
+                              .setId(script.id);
                         } else if (isSelected) {
-                          ref.read(scriptStateProvider.notifier).setId(script.id);
+                          ref
+                              .read(scriptStateProvider.notifier)
+                              .setId(script.id);
                         }
                       },
                     ),
@@ -213,7 +213,7 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
                               _handleToEditor(script: script);
                             },
                           ),
-                          if (script.isCompatibleWithBettbox)
+                          if (script.isCompatibleWithKitonyBox)
                             PopupMenuItemData(
                               icon: Icons.tune,
                               label: appLocalizations.custom,
@@ -323,14 +323,25 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
       message: TextSpan(text: appLocalizations.saveChanges),
     );
     if (res == true && mounted) {
-      _handleEditorSave(context, title, content, script: script, url: script?.url);
+      _handleEditorSave(
+        context,
+        title,
+        content,
+        script: script,
+        url: script?.url,
+      );
     } else {
       return true;
     }
     return false;
   }
 
-  void _handleToEditor({Script? script, String? initialContent, String? url, bool delayedFocus = false}) {
+  void _handleToEditor({
+    Script? script,
+    String? initialContent,
+    String? url,
+    bool delayedFocus = false,
+  }) {
     final title = script?.label ?? '';
     final raw = script?.content ?? initialContent ?? scriptTemplate;
     String? importedUrl = url ?? script?.url;
@@ -348,7 +359,13 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
           final scriptToSave = script != null
               ? script.copyWith(url: importedUrl)
               : null;
-          _handleEditorSave(context, title, content, script: scriptToSave, url: importedUrl);
+          _handleEditorSave(
+            context,
+            title,
+            content,
+            script: scriptToSave,
+            url: importedUrl,
+          );
         },
         onPop: (context, title, content) {
           return _handleEditorPop(context, title, content, raw, script: script);
@@ -452,9 +469,7 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
 class _ScriptSettingsSheet extends ConsumerWidget {
   final SheetType type;
 
-  const _ScriptSettingsSheet({
-    required this.type,
-  });
+  const _ScriptSettingsSheet({required this.type});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -475,17 +490,24 @@ class _ScriptSettingsSheet extends ConsumerWidget {
                   child: CommonCard(
                     type: CommonCardType.filled,
                     child: ListTile(
-                      contentPadding: const EdgeInsets.only(left: 16, right: 16),
+                      contentPadding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                      ),
                       title: EmojiText(profile.label ?? profile.id),
                       trailing: Switch(
                         value: profile.useScriptOverride,
                         onChanged: (value) async {
-                          ref.read(profilesProvider.notifier).updateProfile(
-                            profile.id,
-                            (p) => p.copyWith(useScriptOverride: value),
-                          );
+                          ref
+                              .read(profilesProvider.notifier)
+                              .updateProfile(
+                                profile.id,
+                                (p) => p.copyWith(useScriptOverride: value),
+                              );
                           if (isCurrentProfile) {
-                            await globalState.appController.applyProfile(silence: true);
+                            await globalState.appController.applyProfile(
+                              silence: true,
+                            );
                           }
                         },
                       ),
@@ -585,13 +607,11 @@ class __ScriptCustomOptionsSheetState
     _dirty = false;
     if (mounted) setState(() => _isSaving = true);
     try {
-      final applyFuture = ref.read(scriptStateProvider).currentId == widget.script.id
+      final applyFuture =
+          ref.read(scriptStateProvider).currentId == widget.script.id
           ? globalState.appController.applyProfile(silence: true)
           : Future.value();
-      await Future.wait([
-        applyFuture,
-        Future.delayed(_kMinLoadingDuration),
-      ]);
+      await Future.wait([applyFuture, Future.delayed(_kMinLoadingDuration)]);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -619,8 +639,7 @@ class __ScriptCustomOptionsSheetState
             child: Text(appLocalizations.cancel),
           ),
           FilledButton(
-            onPressed: () =>
-                globalState.navigatorKey.currentState?.pop(true),
+            onPressed: () => globalState.navigatorKey.currentState?.pop(true),
             child: Text(appLocalizations.save),
           ),
         ],
@@ -670,7 +689,10 @@ class __ScriptCustomOptionsSheetState
                     ? NullStatus(label: appLocalizations.noStatusAvailable)
                     : RepaintBoundary(
                         child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 16,
+                          ),
                           itemCount: keys.length,
                           itemBuilder: (_, index) {
                             final key = keys[index];
@@ -682,10 +704,15 @@ class __ScriptCustomOptionsSheetState
                                 child: CommonCard(
                                   type: CommonCardType.filled,
                                   child: ListTile(
-                                    contentPadding:
-                                        const EdgeInsets.only(left: 16, right: 16),
+                                    contentPadding: const EdgeInsets.only(
+                                      left: 16,
+                                      right: 16,
+                                    ),
                                     leading: _isValidIconUrl(iconUrl)
-                                        ? CommonTargetIcon(src: iconUrl!, size: 24)
+                                        ? CommonTargetIcon(
+                                            src: iconUrl!,
+                                            size: 24,
+                                          )
                                         : const Icon(Icons.alt_route),
                                     title: Text(key),
                                     trailing: Switch(
@@ -700,7 +727,7 @@ class __ScriptCustomOptionsSheetState
                             );
                           },
                         ),
-                    ),
+                      ),
               ),
             ],
           ),
@@ -738,8 +765,7 @@ Future<void> showGroupSwitchOptions(
       }
 
       final remaining =
-          _kMinLoadingDuration.inMilliseconds -
-          stopwatch.elapsedMilliseconds;
+          _kMinLoadingDuration.inMilliseconds - stopwatch.elapsedMilliseconds;
       if (remaining > 0) {
         await Future.delayed(Duration(milliseconds: remaining));
       }
@@ -802,8 +828,7 @@ class _GroupSwitchOptionsSheetState
 
     _options = {
       for (final name in widget.groupNames)
-        if (isGlobalMode || name != 'GLOBAL')
-          name: groupSwitches[name] ?? true,
+        if (isGlobalMode || name != 'GLOBAL') name: groupSwitches[name] ?? true,
     };
     _originalOptions = Map<String, bool>.from(_options);
     _lockedGroups = _computeLockedGroups();
@@ -849,8 +874,7 @@ class _GroupSwitchOptionsSheetState
             child: Text(appLocalizations.cancel),
           ),
           FilledButton(
-            onPressed: () =>
-                globalState.navigatorKey.currentState?.pop(true),
+            onPressed: () => globalState.navigatorKey.currentState?.pop(true),
             child: Text(appLocalizations.save),
           ),
         ],
@@ -878,10 +902,12 @@ class _GroupSwitchOptionsSheetState
         for (final name in widget.groupNames) name: _options[name] ?? true,
       };
 
-      ref.read(profilesProvider.notifier).updateProfile(
-        widget.profileId,
-        (state) => state.copyWith(groupSwitches: validOptions),
-      );
+      ref
+          .read(profilesProvider.notifier)
+          .updateProfile(
+            widget.profileId,
+            (state) => state.copyWith(groupSwitches: validOptions),
+          );
 
       final patchConfig = ref.read(patchClashConfigProvider);
       final rawConfig = await globalState.patchRawConfig(
@@ -898,10 +924,12 @@ class _GroupSwitchOptionsSheetState
       );
 
       if (message.isNotEmpty) {
-        ref.read(profilesProvider.notifier).updateProfile(
-          widget.profileId,
-          (state) => state.copyWith(groupSwitches: _originalOptions),
-        );
+        ref
+            .read(profilesProvider.notifier)
+            .updateProfile(
+              widget.profileId,
+              (state) => state.copyWith(groupSwitches: _originalOptions),
+            );
         if (mounted) {
           await globalState.showMessage(
             message: TextSpan(
@@ -913,13 +941,8 @@ class _GroupSwitchOptionsSheetState
         return;
       }
 
-      final applyFuture = globalState.appController.applyProfile(
-        silence: true,
-      );
-      await Future.wait([
-        applyFuture,
-        Future.delayed(_kMinLoadingDuration),
-      ]);
+      final applyFuture = globalState.appController.applyProfile(silence: true);
+      await Future.wait([applyFuture, Future.delayed(_kMinLoadingDuration)]);
 
       _dirty = false;
       _originalOptions = Map<String, bool>.from(validOptions);
@@ -971,9 +994,7 @@ class _GroupSwitchOptionsSheetState
                             final locked = _lockedGroups.contains(key);
                             return RepaintBoundary(
                               child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
+                                margin: const EdgeInsets.symmetric(vertical: 4),
                                 child: CommonCard(
                                   type: CommonCardType.filled,
                                   child: ListTile(

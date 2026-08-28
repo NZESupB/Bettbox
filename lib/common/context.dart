@@ -1,5 +1,5 @@
-import 'package:bett_box/manager/message_manager.dart';
-import 'package:bett_box/widgets/scaffold.dart';
+import 'package:kitony_box/manager/message_manager.dart';
+import 'package:kitony_box/widgets/scaffold.dart';
 import 'package:flutter/material.dart';
 
 extension BuildContextExtension on BuildContext {
@@ -7,10 +7,18 @@ extension BuildContextExtension on BuildContext {
     return findAncestorStateOfType<CommonScaffoldState>();
   }
 
-  Future<void>? showNotifier(String text,
-      {VoidCallback? onAction, String? actionLabel, bool showCountdown = false}) {
-    return findAncestorStateOfType<MessageManagerState>()
-        ?.message(text, onAction: onAction, actionLabel: actionLabel, showCountdown: showCountdown);
+  Future<void>? showNotifier(
+    String text, {
+    VoidCallback? onAction,
+    String? actionLabel,
+    bool showCountdown = false,
+  }) {
+    return findAncestorStateOfType<MessageManagerState>()?.message(
+      text,
+      onAction: onAction,
+      actionLabel: actionLabel,
+      showCountdown: showCountdown,
+    );
   }
 
   void showSnackBar(String message, {SnackBarAction? action}) {

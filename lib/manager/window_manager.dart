@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_ext/window_ext.dart';
@@ -182,7 +182,7 @@ class _WindowHeaderState extends ConsumerState<WindowHeader> {
     final isMaximized = await windowManager.isMaximized();
     if (!mounted) return;
     isMaximizedNotifier.value = isMaximized;
-    
+
     final isAlwaysOnTop = await windowManager.isAlwaysOnTop();
     if (!mounted) return;
     isPinNotifier.value = isAlwaysOnTop;
@@ -214,9 +214,9 @@ class _WindowHeaderState extends ConsumerState<WindowHeader> {
     final newIsPinned = !isAlwaysOnTop;
     await windowManager.setAlwaysOnTop(newIsPinned);
     isPinNotifier.value = newIsPinned;
-    ref.read(windowSettingProvider.notifier).updateState(
-          (state) => state.copyWith(isPinned: newIsPinned),
-        );
+    ref
+        .read(windowSettingProvider.notifier)
+        .updateState((state) => state.copyWith(isPinned: newIsPinned));
   }
 
   Widget _buildActions() {

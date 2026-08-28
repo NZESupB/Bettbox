@@ -1,27 +1,28 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/l10n/l10n.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/views/about.dart';
-import 'package:bett_box/views/access.dart';
-import 'package:bett_box/views/application_setting.dart';
-import 'package:bett_box/views/config/config.dart';
-import 'package:bett_box/views/config/dns.dart';
-import 'package:bett_box/views/config/experimental.dart';
-import 'package:bett_box/views/config/general.dart';
-import 'package:bett_box/views/config/network.dart';
-import 'package:bett_box/views/config/ntp.dart';
-import 'package:bett_box/views/config/sniffer.dart';
-import 'package:bett_box/views/config/tunnel.dart';
-import 'package:bett_box/views/connection/connections.dart';
-import 'package:bett_box/views/hotkey.dart';
-import 'package:bett_box/views/other_setting.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/l10n/l10n.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/views/account/account.dart';
+import 'package:kitony_box/views/about.dart';
+import 'package:kitony_box/views/access.dart';
+import 'package:kitony_box/views/application_setting.dart';
+import 'package:kitony_box/views/config/config.dart';
+import 'package:kitony_box/views/config/dns.dart';
+import 'package:kitony_box/views/config/experimental.dart';
+import 'package:kitony_box/views/config/general.dart';
+import 'package:kitony_box/views/config/network.dart';
+import 'package:kitony_box/views/config/ntp.dart';
+import 'package:kitony_box/views/config/sniffer.dart';
+import 'package:kitony_box/views/config/tunnel.dart';
+import 'package:kitony_box/views/connection/connections.dart';
+import 'package:kitony_box/views/hotkey.dart';
+import 'package:kitony_box/views/other_setting.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -217,6 +218,17 @@ class _ToolViewState extends ConsumerState<ToolsView> {
     }
 
     items.addAll([
+      _SearchItem(
+        title: appLocalizations.xboardAccount,
+        subtitle: appLocalizations.xboardAccountDesc,
+        category: settingsCategory,
+        leading: const Icon(Icons.account_circle_outlined),
+        onTap: (context, _) => _pushPage(
+          context,
+          appLocalizations.xboardAccount,
+          const AccountView(),
+        ),
+      ),
       _SearchItem(
         title: appLocalizations.language,
         subtitle: appLocalizations.language,
@@ -1374,6 +1386,7 @@ class _ToolViewState extends ConsumerState<ToolsView> {
         context,
         title: appLocalizations.settings,
         items: [
+          _AccountItem(),
           _LocaleItem(),
           _ThemeItem(),
           _BackupItem(),
@@ -1412,6 +1425,23 @@ class _ToolViewState extends ConsumerState<ToolsView> {
   }
 }
 
+class _AccountItem extends StatelessWidget {
+  const _AccountItem();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListItem.next(
+      leading: const Icon(Icons.account_circle_outlined),
+      title: Text(appLocalizations.xboardAccount),
+      subtitle: Text(appLocalizations.xboardAccountDesc),
+      delegate: NextDelegate(
+        title: appLocalizations.xboardAccount,
+        builder: (_) => const AccountView(),
+      ),
+    );
+  }
+}
+
 class _LocaleItem extends ConsumerWidget {
   const _LocaleItem();
 
@@ -1428,7 +1458,9 @@ class _LocaleItem extends ConsumerWidget {
 
   static List<Locale> _getOrderedLocales() {
     final priority = ['zh_CN', 'zh_TC', 'en', 'ru', 'fa', 'ja', 'ko'];
-    final locales = List<Locale>.from(AppLocalizations.delegate.supportedLocales);
+    final locales = List<Locale>.from(
+      AppLocalizations.delegate.supportedLocales,
+    );
     locales.sort((a, b) {
       final aKey = a.toString();
       final bKey = b.toString();

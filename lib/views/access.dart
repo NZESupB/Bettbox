@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1038,8 +1038,9 @@ class _AccessControlPanelState extends ConsumerState<AccessControlPanel> {
 
         final currentState = ref.read(vpnSettingProvider).accessControl;
         final isAccept = currentState.mode == AccessControlMode.acceptSelected;
-        final currentList =
-            isAccept ? currentState.acceptList : currentState.rejectList;
+        final currentList = isAccept
+            ? currentState.acceptList
+            : currentState.rejectList;
         final newList = {...currentList, ...packages}.toList();
 
         newAccessControl = currentState.copyWith(
@@ -1048,7 +1049,9 @@ class _AccessControlPanelState extends ConsumerState<AccessControlPanel> {
         );
       }
 
-      ref.read(vpnSettingProvider.notifier).updateState(
+      ref
+          .read(vpnSettingProvider.notifier)
+          .updateState(
             (state) => state.copyWith(accessControl: newAccessControl),
           );
     });

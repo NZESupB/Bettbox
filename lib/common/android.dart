@@ -1,5 +1,5 @@
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/state.dart';
 
 import 'system.dart';
 

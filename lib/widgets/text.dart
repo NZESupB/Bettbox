@@ -1,5 +1,5 @@
 import 'package:emoji_regex/emoji_regex.dart';
-import 'package:bett_box/enum/enum.dart';
+import 'package:kitony_box/enum/enum.dart';
 import 'package:flutter/material.dart';
 
 import '../state.dart';
@@ -62,10 +62,7 @@ class EmojiText extends StatelessWidget {
     this.textAlign,
   });
 
-  List<TextSpan> _buildTextSpans(
-    String text,
-    TextStyle defaultStyle,
-  ) {
+  List<TextSpan> _buildTextSpans(String text, TextStyle defaultStyle) {
     final List<TextSpan> spans = [];
     final matches = emojiRegex().allMatches(text);
     final effectiveStyle = style ?? defaultStyle;
@@ -111,9 +108,7 @@ class EmojiText extends StatelessWidget {
       textScaler: MediaQuery.of(context).textScaler,
       maxLines: maxLines,
       overflow: overflow ?? TextOverflow.clip,
-      text: TextSpan(
-        children: _buildTextSpans(text, defaultStyle),
-      ),
+      text: TextSpan(children: _buildTextSpans(text, defaultStyle)),
     );
   }
 }

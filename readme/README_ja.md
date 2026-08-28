@@ -2,16 +2,16 @@
   <a href="../README.md">简体中文</a> | <a href="README_en.md">English</a> | <a href="README_ru.md">Русский</a> | <a href="README_fa.md">فارسی</a> | <strong>日本語</strong> | <a href="README_ko.md">한국어</a>
 </h4>
 
-<h1 align="center">⚡ Bettbox</h1>
+<h1 align="center">⚡ KitonyBox</h1>
 <p align="center">
   <strong>Another Better Mihomo Client</strong>
 </p>
 
-**Bettbox は、Mihomo（Clash Meta）カーネルを搭載し、初期の FlClash をベースに再構築されたマルチプラットフォーム対応のネットワークデバッグ・分流クライアントです。**
+**KitonyBox は、Mihomo（Clash Meta）カーネルを搭載し、初期の FlClash をベースに再構築されたマルチプラットフォーム対応のネットワークデバッグ・分流クライアントです。**
 
 「Better Experience（より良い体験）」を追求し、オリジナルの洗練された UI を継承しつつ、細部のデザインや実用ロジックを深層最適化。目指したのは「フロントエンドはぬるぬる滑らか、バックグラウンドは省電力で無感」。低リソースで安定動作する Mihomo クライアントを提供します。
 
-Bettbox：Better Experience, Out of the box（優れた体験を、すぐに使える）。
+KitonyBox：Better Experience, Out of the box（優れた体験を、すぐに使える）。
 
 [![Latest Release](https://img.shields.io/github/v/release/appshubcc/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/appshubcc/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
 ---
@@ -21,7 +21,7 @@ Bettbox：Better Experience, Out of the box（優れた体験を、すぐに使�
 
 <div align="left">
 
-[![Telegram Group](https://img.shields.io/badge/Bettbox-Chat-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_chat) [![Telegram Channel](https://img.shields.io/badge/Bettbox-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_channel)
+[![Telegram Group](https://img.shields.io/badge/KitonyBox-Chat-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_chat) [![Telegram Channel](https://img.shields.io/badge/KitonyBox-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_channel)
 
 ---
 ## 🚀 主な特徴
@@ -58,8 +58,8 @@ Bettbox：Better Experience, Out of the box（優れた体験を、すぐに使�
 * **HarmonyOS NEXT**: [[卓易通]](https://harmonyos.cool/android-app) と組み合わせてご利用ください
 
 **その他のインストール方法:**<br>
-**ArchLinux:** <code>yay -S bettbox-bin または paru -S bettbox-bin</code> ([lyj404](https://github.com/lyj404/bettbox-aur) により維持)<br>
-**AMD64=v1:** <code>yay -S bettbox-compatible-bin または paru -S bettbox-compatible-bin</code> ([VillagerTom](https://github.com/VillagerTom) により維持)
+**ArchLinux:** <code>yay -S kitonybox-bin または paru -S kitonybox-bin</code> ([lyj404](https://github.com/lyj404/kitonybox-aur) により維持)<br>
+**AMD64=v1:** <code>yay -S kitonybox-compatible-bin または paru -S kitonybox-compatible-bin</code> ([VillagerTom](https://github.com/VillagerTom) により維持)
 
 ---
 ## ❓ よくある質問
@@ -67,7 +67,7 @@ Bettbox：Better Experience, Out of the box（優れた体験を、すぐに使�
 1. **インストール・起動およびセキュリティ**：
    - Android端末：**十分なバックグラウンド権限が与えられているか、最低システム要件（Android 8.0+）を満たしているか**確認してください。
    - デスクトップ旧型端末：システムアーキテクチャに応じて**特定 CPU クラス向けの Compatible バージョンが必要か**確認してください。
-   - **セキュリティ：Bettbox は完全オープンソースかつ透明で、コードは Signpath のセキュリティ監査に合格しています。**
+   - **セキュリティ：KitonyBox は完全オープンソースかつ透明で、コードは Signpath のセキュリティ監査に合格しています。**
 
 2. **デスクトップ端末のよくある質問**：
    - Windows管理者権限：インストール時に自動処理されるため、**手動での再権限付与は不要です**。
@@ -76,16 +76,16 @@ Bettbox：Better Experience, Out of the box（優れた体験を、すぐに使�
    - 問題が解決しない場合は、ISSUE を提出してください。
 
 3. **macOSインストールガイド**：
-   - ご利用の環境（Intel / Apple Silicon）に適したファイルをダウンロードし、`Bettbox-macos-xx.dmg` をダブルクリックして開きます。
-   - Bettbox アイコンを「Applications」フォルダにドラッグ＆ドロップしてインストール完了。
+   - ご利用の環境（Intel / Apple Silicon）に適したファイルをダウンロードし、`KitonyBox-macos-xx.dmg` をダブルクリックして開きます。
+   - KitonyBox アイコンを「Applications」フォルダにドラッグ＆ドロップしてインストール完了。
    - **初回起動時の Gatekeeper 回避**（[現在 Apple デベロッパー証明書を購入していないため](https://support.apple.com/en-us/102445)）：
-     - **推奨**：「Applications」フォルダ内で **Bettbox アイコンを右クリック**し、**「開く」** を選択後、確認ダイアログで再度 **「開く」** をクリックします。
-     - **代替案**：ダブルクリックで開けない場合は、Mac「システム設定」 -> 「プライバシーとセキュリティ」から Bettbox を探して **「このまま開く」** をクリックします。
+     - **推奨**：「Applications」フォルダ内で **KitonyBox アイコンを右クリック**し、**「開く」** を選択後、確認ダイアログで再度 **「開く」** をクリックします。
+     - **代替案**：ダブルクリックで開けない場合は、Mac「システム設定」 -> 「プライバシーとセキュリティ」から KitonyBox を探して **「このまま開く」** をクリックします。
    - 初めて TUN モードを有効にする際、Mac のシステムパスワードを入力してネットワーク構成を許可してください。
    - **「壊れているため開けません。ゴミ箱に入れる必要があります」と表示される場合**：
      - 未署名ソフトに対する macOS Gatekeeper の誤検知です。ターミナル（Terminal）で以下を実行して隔離属性を解除してください：
        ```bash
-       xattr -d com.apple.quarantine /Applications/Bettbox.app
+       xattr -d com.apple.quarantine /Applications/KitonyBox.app
        ```
 
 4. **購読リンクをインポートできない**：
@@ -111,8 +111,8 @@ Windows の例：
 
 カスタムスクリプト UI 適応：
 
-* v1.18.8 より、Bettbox は外部オーバーライドスクリプトの UI 適応をサポートしています。例えば AIsouler の **[スクリプト/設定リポジトリ](https://github.com/AIsouler/MyClash)** の場合、スクリプトの1行目に以下を追加するだけで、Bettbox 内蔵のトグルスイッチを直接使用できます：
-* <code>const Compatible_With_Bettbox = { ruleOptionsEnable: true };</code>
+* v1.18.8 より、KitonyBox は外部オーバーライドスクリプトの UI 適応をサポートしています。例えば AIsouler の **[スクリプト/設定リポジトリ](https://github.com/AIsouler/MyClash)** の場合、スクリプトの1行目に以下を追加するだけで、KitonyBox 内蔵のトグルスイッチを直接使用できます：
+* <code>const Compatible_With_KitonyBox = { ruleOptionsEnable: true };</code>
 
 ---
 

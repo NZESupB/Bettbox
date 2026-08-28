@@ -1,16 +1,16 @@
 import 'dart:typed_data';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/common/dav_client.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/providers/config.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/dialog.dart';
-import 'package:bett_box/widgets/fade_box.dart';
-import 'package:bett_box/widgets/input.dart';
-import 'package:bett_box/widgets/list.dart';
-import 'package:bett_box/widgets/text.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/common/dav_client.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/providers/config.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/dialog.dart';
+import 'package:kitony_box/widgets/fade_box.dart';
+import 'package:kitony_box/widgets/input.dart';
+import 'package:kitony_box/widgets/list.dart';
+import 'package:kitony_box/widgets/text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

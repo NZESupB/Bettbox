@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:bett_box/common/common.dart';
+import 'package:kitony_box/common/common.dart';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,7 +16,7 @@ class AppPath {
   AppPath._internal() {
     appDirPath = join(dirname(Platform.resolvedExecutable));
     getApplicationSupportDirectory().then((value) {
-      if (system.isWindows && AppIdentity.isDev) {
+      if (AppIdentity.isDev && !Platform.isAndroid && !Platform.isIOS) {
         dataDir.complete(
           Directory(join(value.parent.path, AppIdentity.dataDirName)),
         );

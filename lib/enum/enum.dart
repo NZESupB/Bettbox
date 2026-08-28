@@ -2,10 +2,10 @@
 
 import 'dart:io';
 
-import 'package:bett_box/common/system.dart';
-import 'package:bett_box/common/app_localizations.dart';
-import 'package:bett_box/views/dashboard/widgets/widgets.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/system.dart';
+import 'package:kitony_box/common/app_localizations.dart';
+import 'package:kitony_box/views/dashboard/widgets/widgets.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -122,7 +122,12 @@ enum AccessSortType { none, name, time }
 
 enum ProfileType { file, url }
 
-enum ConnectionsSortType { defaultSort, realTimeSpeed, totalTraffic, creationTime }
+enum ConnectionsSortType {
+  defaultSort,
+  realTimeSpeed,
+  totalTraffic,
+  creationTime,
+}
 
 enum ResultType {
   @JsonValue(0)
@@ -355,6 +360,7 @@ enum PageLabel {
   dashboard,
   proxies,
   profiles,
+  account,
   tools,
   logs,
   requests,
@@ -372,6 +378,8 @@ extension PageLabelExtension on PageLabel {
         return appLocalizations.proxies;
       case PageLabel.profiles:
         return appLocalizations.profiles;
+      case PageLabel.account:
+        return appLocalizations.xboardAccount;
       case PageLabel.tools:
         return appLocalizations.navTools;
       case PageLabel.logs:
@@ -387,7 +395,6 @@ extension PageLabelExtension on PageLabel {
     }
   }
 }
-
 
 enum RuleAction {
   DOMAIN('DOMAIN'),

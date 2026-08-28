@@ -1,8 +1,8 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -68,13 +68,11 @@ class _NodeExclusionDialog extends ConsumerStatefulWidget {
   final String currentValue;
   final String? Function(String?)? validator;
 
-  const _NodeExclusionDialog({
-    required this.currentValue,
-    this.validator,
-  });
+  const _NodeExclusionDialog({required this.currentValue, this.validator});
 
   @override
-  ConsumerState<_NodeExclusionDialog> createState() => _NodeExclusionDialogState();
+  ConsumerState<_NodeExclusionDialog> createState() =>
+      _NodeExclusionDialogState();
 }
 
 class _NodeExclusionDialogState extends ConsumerState<_NodeExclusionDialog> {
@@ -165,7 +163,9 @@ class _ConcurrencyLimitItem extends ConsumerWidget {
         textBuilder: (value) => _getDisplayText(value, context),
         onChanged: (value) {
           if (value != null) {
-            ref.read(proxiesStyleSettingProvider.notifier).updateState(
+            ref
+                .read(proxiesStyleSettingProvider.notifier)
+                .updateState(
                   (state) => state.copyWith(concurrencyLimit: value),
                 );
           }
@@ -246,9 +246,9 @@ class _DelayAnimationItem extends ConsumerWidget {
         textBuilder: (value) => _getTextForDelayAnimation(value),
         onChanged: (value) {
           if (value != null) {
-            ref.read(proxiesStyleSettingProvider.notifier).updateState(
-                  (state) => state.copyWith(delayAnimation: value),
-                );
+            ref
+                .read(proxiesStyleSettingProvider.notifier)
+                .updateState((state) => state.copyWith(delayAnimation: value));
           }
         },
       ),

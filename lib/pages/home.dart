@@ -1,9 +1,9 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,8 +32,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  bool get isNavFocused =>
-      _navFocusNodes.values.any((node) => node.hasFocus);
+  bool get isNavFocused => _navFocusNodes.values.any((node) => node.hasFocus);
 
   void focusNav() {
     if (!globalState.isAndroidTV || !mounted) return;
@@ -189,74 +188,77 @@ class _HomePageState extends State<HomePage> {
           child: FocusTraversalGroup(
             policy: WidgetOrderTraversalPolicy(),
             child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: navigationItems.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              final isSelected = index == currentIndex;
-              final focusNode = _getNavFocusNode(index);
-              return FocusTraversalOrder(
-                order: NumericFocusOrder(index.toDouble()),
-                child: AnimatedBuilder(
-                  animation: focusNode,
-                  builder: (context, child) {
-                    final isFocused = focusNode.hasFocus;
-                    return InkWell(
-                      focusNode: focusNode,
-                      onTap: () {
-                        globalState.appController.toPage(item.label);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? context.colorScheme.secondaryContainer
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          border: isFocused
-                              ? Border.all(
-                                  color: context.colorScheme.primary,
-                                  width: 2,
-                                )
-                              : Border.all(color: Colors.transparent, width: 2),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconTheme(
-                              data: IconThemeData(
-                                color: isSelected
-                                    ? context.colorScheme.onSecondaryContainer
-                                    : context.colorScheme.onSurfaceVariant,
-                                size: 24,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: navigationItems.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final isSelected = index == currentIndex;
+                final focusNode = _getNavFocusNode(index);
+                return FocusTraversalOrder(
+                  order: NumericFocusOrder(index.toDouble()),
+                  child: AnimatedBuilder(
+                    animation: focusNode,
+                    builder: (context, child) {
+                      final isFocused = focusNode.hasFocus;
+                      return InkWell(
+                        focusNode: focusNode,
+                        onTap: () {
+                          globalState.appController.toPage(item.label);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? context.colorScheme.secondaryContainer
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: isFocused
+                                ? Border.all(
+                                    color: context.colorScheme.primary,
+                                    width: 2,
+                                  )
+                                : Border.all(
+                                    color: Colors.transparent,
+                                    width: 2,
+                                  ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconTheme(
+                                data: IconThemeData(
+                                  color: isSelected
+                                      ? context.colorScheme.onSecondaryContainer
+                                      : context.colorScheme.onSurfaceVariant,
+                                  size: 24,
+                                ),
+                                child: item.icon,
                               ),
-                              child: item.icon,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.label.localizedName,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? context.colorScheme.onSecondaryContainer
-                                    : context.colorScheme.onSurfaceVariant,
-                                fontSize: 12,
+                              const SizedBox(height: 4),
+                              Text(
+                                item.label.localizedName,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? context.colorScheme.onSecondaryContainer
+                                      : context.colorScheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            }).toList(),
+                      );
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }

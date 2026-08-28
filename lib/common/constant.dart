@@ -2,10 +2,10 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:collection/collection.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/material.dart';
 
 const appName = AppIdentity.displayName;
@@ -15,7 +15,7 @@ const tunDeviceName = AppIdentity.tunDeviceName;
 const browserUa =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36';
 const packageName = AppIdentity.packageId;
-final unixSocketPath = '/tmp/BettboxSocket_${Random().nextInt(10000)}.sock';
+final unixSocketPath = '/tmp/KitonyBoxSocket_${Random().nextInt(10000)}.sock';
 const maxTextScale = 1.4;
 const minTextScale = 0.8;
 final baseInfoEdgeInsets = EdgeInsets.symmetric(
@@ -138,9 +138,9 @@ double getWidgetHeight(num lines) {
 
 const maxLength = 256;
 
-final mainIsolate = 'BettboxMainIsolate';
+final mainIsolate = 'KitonyBoxMainIsolate';
 
-final serviceIsolate = 'BettboxServiceIsolate';
+final serviceIsolate = 'KitonyBoxServiceIsolate';
 
 const defaultPrimaryColors = [
   0xFF191919,

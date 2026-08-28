@@ -1,9 +1,9 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,7 +63,9 @@ class _UaItemState extends ConsumerState<UaItem> {
     return ListItem(
       leading: const Icon(Icons.computer_outlined),
       title: const Text('UA'),
-      subtitle: Text(isCustom ? appLocalizations.custom : appLocalizations.defaultText),
+      subtitle: Text(
+        isCustom ? appLocalizations.custom : appLocalizations.defaultText,
+      ),
       onTap: () async {
         final notifier = ref.read(patchClashConfigProvider.notifier);
         final result = await globalState.showCommonDialog<_UaOption>(
@@ -90,7 +92,9 @@ class _UaItemState extends ConsumerState<UaItem> {
               ),
             );
             if (customUa != null && customUa.trim().isNotEmpty) {
-              notifier.updateState((state) => state.copyWith(globalUa: customUa.trim()));
+              notifier.updateState(
+                (state) => state.copyWith(globalUa: customUa.trim()),
+              );
             }
         }
       },
@@ -124,18 +128,28 @@ class _UaDialog extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                Navigator.of(context, rootNavigator: true).pop(const _UaOption(_UaOptionType.default_));
+                Navigator.of(
+                  context,
+                  rootNavigator: true,
+                ).pop(const _UaOption(_UaOptionType.default_));
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Icon(
-                      !isCustom ? Icons.check_circle_rounded : Icons.circle_outlined,
+                      !isCustom
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined,
                       size: 21,
                       color: !isCustom
                           ? context.colorScheme.primary
-                          : context.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          : context.colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.6,
+                            ),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -152,18 +166,28 @@ class _UaDialog extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
-                Navigator.of(context, rootNavigator: true).pop(const _UaOption(_UaOptionType.custom));
+                Navigator.of(
+                  context,
+                  rootNavigator: true,
+                ).pop(const _UaOption(_UaOptionType.custom));
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Icon(
-                      isCustom ? Icons.check_circle_rounded : Icons.circle_outlined,
+                      isCustom
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined,
                       size: 21,
                       color: isCustom
                           ? context.colorScheme.primary
-                          : context.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          : context.colorScheme.onSurfaceVariant.withValues(
+                              alpha: 0.6,
+                            ),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -279,7 +303,9 @@ class _TestUrlDialog extends ConsumerWidget {
                   value: overrideTestUrl,
                   onChanged: (bool value) async {
                     ref.read(overrideTestUrlProvider.notifier).value = value;
-                    globalState.appController.applyProfileDebounce(silence: true);
+                    globalState.appController.applyProfileDebounce(
+                      silence: true,
+                    );
                   },
                 ),
               ],
@@ -297,7 +323,9 @@ class _TestUrlDialog extends ConsumerWidget {
                       .read(appSettingProvider.notifier)
                       .updateState((state) => state.copyWith(testUrl: url));
                   if (ref.read(overrideTestUrlProvider)) {
-                    globalState.appController.applyProfileDebounce(silence: true);
+                    globalState.appController.applyProfileDebounce(
+                      silence: true,
+                    );
                   }
                   if (context.mounted) {
                     Navigator.of(context, rootNavigator: true).pop();
@@ -359,10 +387,14 @@ class _TestUrlDialog extends ConsumerWidget {
                     resetValue: defaultTestUrl,
                     validator: (String? inputValue) {
                       if (inputValue == null || inputValue.isEmpty) {
-                        return appLocalizations.emptyTip(appLocalizations.testUrl);
+                        return appLocalizations.emptyTip(
+                          appLocalizations.testUrl,
+                        );
                       }
                       if (!inputValue.isUrl) {
-                        return appLocalizations.urlTip(appLocalizations.testUrl);
+                        return appLocalizations.urlTip(
+                          appLocalizations.testUrl,
+                        );
                       }
                       return null;
                     },
@@ -370,9 +402,13 @@ class _TestUrlDialog extends ConsumerWidget {
                 );
 
                 if (customUrl != null) {
-                  notifier.updateState((state) => state.copyWith(testUrl: customUrl));
+                  notifier.updateState(
+                    (state) => state.copyWith(testUrl: customUrl),
+                  );
                   if (overrideTestUrl) {
-                    globalState.appController.applyProfileDebounce(silence: true);
+                    globalState.appController.applyProfileDebounce(
+                      silence: true,
+                    );
                   }
                 }
               },
@@ -610,7 +646,7 @@ class ExternalControllerItem extends ConsumerWidget {
     );
     final secret = hasExternalController
         ? ref.watch(patchClashConfigProvider.select((state) => state.secret)) ??
-            ''
+              ''
         : '';
 
     return Column(

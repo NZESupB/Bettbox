@@ -4,10 +4,10 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
 
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/plugins/tile.dart';
-import 'package:bett_box/plugins/vpn.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/plugins/tile.dart';
+import 'package:kitony_box/plugins/vpn.dart';
+import 'package:kitony_box/state.dart';
 import 'package:code_forge/code_forge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
@@ -95,7 +95,7 @@ Future<void> _runApp() async {
   await android?.init();
 
   await window?.init();
-  HttpOverrides.global = BettboxHttpOverrides();
+  HttpOverrides.global = KitonyBoxHttpOverrides();
   runApp(ProviderScope(child: const Application()));
 }
 
@@ -222,7 +222,7 @@ Future<void> _service(List<String> flags) async {
           final profile = globalState.config.profiles
               .where((e) => e.id == profileId)
               .firstOrNull;
-          final profileName = profile?.label ?? 'Bettbox';
+          final profileName = profile?.label ?? 'KitonyBox';
           await vpn?.updateNotificationSpeed(profileName, '↑0B/s ↓0B/s');
         }
 
@@ -317,8 +317,8 @@ class _VpnListenerWithService with VpnListener {
   const _VpnListenerWithService({
     required Function(String dns) onDnsChanged,
     required Function() onNetworkChanged,
-  })  : _onDnsChanged = onDnsChanged,
-        _onNetworkChanged = onNetworkChanged;
+  }) : _onDnsChanged = onDnsChanged,
+       _onNetworkChanged = onNetworkChanged;
 
   @override
   void onDnsChanged(String dns) {

@@ -337,7 +337,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteTip": m2,
     "deleteTunnel": MessageLookupByLibrary.simpleMessage("Delete Forwarding"),
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Bettbox is based on the powerful and flexible Mihomo (Clash.Meta) proxy kernel, dedicated to a superior user experience. Forked from FlClash: Better Experience, Out of the box",
+      "KitonyBox is based on the powerful and flexible Mihomo (Clash.Meta) proxy kernel, dedicated to a superior user experience. Forked from FlClash: Better Experience, Out of the box",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("Destination"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage(
@@ -1233,6 +1233,59 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Requires administrator privileges",
     ),
+    "xboardAccount": MessageLookupByLibrary.simpleMessage("Panel Account"),
+    "xboardAccountDesc": MessageLookupByLibrary.simpleMessage(
+      "Sign in to the panel and auto-sync subscription",
+    ),
+    "xboardEmail": MessageLookupByLibrary.simpleMessage("Email"),
+    "xboardEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "Invalid email format",
+    ),
+    "xboardEmailNull": MessageLookupByLibrary.simpleMessage(
+      "Please enter email",
+    ),
+    "xboardExpireAt": MessageLookupByLibrary.simpleMessage("Expire Time"),
+    "xboardLastSync": MessageLookupByLibrary.simpleMessage("Last Synced"),
+    "xboardLinkedProfile": MessageLookupByLibrary.simpleMessage(
+      "Linked Subscription",
+    ),
+    "xboardLogin": MessageLookupByLibrary.simpleMessage("Sign In"),
+    "xboardLoginFailed": MessageLookupByLibrary.simpleMessage("Sign in failed"),
+    "xboardLoginHint": MessageLookupByLibrary.simpleMessage(
+      "Sign in with your panel email and password. The subscription will be imported automatically.",
+    ),
+    "xboardLogout": MessageLookupByLibrary.simpleMessage("Sign Out"),
+    "xboardLogoutConfirm": MessageLookupByLibrary.simpleMessage("Sign out?"),
+    "xboardNeverExpires": MessageLookupByLibrary.simpleMessage("Never Expires"),
+    "xboardNotLoggedIn": MessageLookupByLibrary.simpleMessage("Not signed in"),
+    "xboardPersistFailed": MessageLookupByLibrary.simpleMessage(
+      "Failed to save account data locally",
+    ),
+    "xboardPassword": MessageLookupByLibrary.simpleMessage("Password"),
+    "xboardPasswordNull": MessageLookupByLibrary.simpleMessage(
+      "Please enter password",
+    ),
+    "xboardPlan": MessageLookupByLibrary.simpleMessage("Plan"),
+    "xboardRefreshInfo": MessageLookupByLibrary.simpleMessage("Refresh Info"),
+    "xboardRelogin": MessageLookupByLibrary.simpleMessage("Sign In Again"),
+    "xboardSessionExpired": MessageLookupByLibrary.simpleMessage(
+      "Session expired, please sign in again",
+    ),
+    "xboardSignedIn": MessageLookupByLibrary.simpleMessage("Signed In"),
+    "xboardStatus": MessageLookupByLibrary.simpleMessage("Status"),
+    "xboardSyncSubscription": MessageLookupByLibrary.simpleMessage(
+      "Sync Subscription",
+    ),
+    "xboardSyncSubscriptionFailed": MessageLookupByLibrary.simpleMessage(
+      "Subscription sync failed, please retry later",
+    ),
+    "xboardSyncSubscriptionSuccess": MessageLookupByLibrary.simpleMessage(
+      "Subscription synced",
+    ),
+    "xboardTrafficRemaining": MessageLookupByLibrary.simpleMessage(
+      "Remaining Traffic",
+    ),
+    "xboardTrafficUsage": MessageLookupByLibrary.simpleMessage("Traffic Usage"),
     "years": m14,
   };
 }

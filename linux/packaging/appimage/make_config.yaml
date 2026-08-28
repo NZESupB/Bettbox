@@ -1,19 +1,19 @@
-display_name: Bettbox
+display_name: KitonyBox
 
 icon: ./assets/images/icon.png
 
 keywords:
-  - Bettbox
+  - KitonyBox
   - Clash
   - ClashMeta
   - Proxy
 
-generic_name: Bettbox
+generic_name: KitonyBox
 
 categories:
   - Network
 
 startup_notify: true
-startup_wm_class: com.appshub.bettbox
+startup_wm_class: com.appshub.kitonybox
 
 include: []

@@ -1,12 +1,12 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/common/network_matcher.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/plugins/service.dart';
-import 'package:bett_box/providers/config.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/common/network_matcher.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/plugins/service.dart';
+import 'package:kitony_box/providers/config.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -64,8 +64,7 @@ class SmartAutoStopSection extends ConsumerWidget {
                   ref
                       .read(vpnSettingProvider.notifier)
                       .updateState(
-                        (state) =>
-                            state.copyWith(smartAutoStopNetworks: value),
+                        (state) => state.copyWith(smartAutoStopNetworks: value),
                       );
                 }
               },
@@ -309,7 +308,8 @@ class BatteryOptimizationItem extends ConsumerStatefulWidget {
       _BatteryOptimizationItemState();
 }
 
-class _BatteryOptimizationItemState extends ConsumerState<BatteryOptimizationItem>
+class _BatteryOptimizationItemState
+    extends ConsumerState<BatteryOptimizationItem>
     with WidgetsBindingObserver {
   bool? _isIgnoring;
   bool _isWaitingForSettings = false;
@@ -447,7 +447,9 @@ class DisableQuicSection extends ConsumerWidget {
               onChanged: (bool value) async {
                 ref
                     .read(vpnSettingProvider.notifier)
-                    .updateState((state) => state.copyWith(excludeChina: value));
+                    .updateState(
+                      (state) => state.copyWith(excludeChina: value),
+                    );
                 globalState.appController.setupClashConfigDebounce();
               },
             ),
@@ -568,7 +570,9 @@ class TraySection extends ConsumerWidget {
             onChanged: (bool value) async {
               ref
                   .read(vpnSettingProvider.notifier)
-                  .updateState((state) => state.copyWith(trayEnhancement: value));
+                  .updateState(
+                    (state) => state.copyWith(trayEnhancement: value),
+                  );
               await globalState.appController.updateTray();
             },
           ),
@@ -593,7 +597,9 @@ class TraySection extends ConsumerWidget {
               onChanged: (bool value) async {
                 ref
                     .read(vpnSettingProvider.notifier)
-                    .updateState((state) => state.copyWith(enableTraySpeed: value));
+                    .updateState(
+                      (state) => state.copyWith(enableTraySpeed: value),
+                    );
                 await globalState.appController.updateTray();
               },
             ),

@@ -59,7 +59,9 @@ int hostSpecificity(String pattern) {
 bool matchDomainPattern(String pattern, Iterable<String> domains) {
   pattern = pattern.toLowerCase();
 
-  if (!pattern.contains('*') && !pattern.startsWith('+.') && !pattern.startsWith('.')) {
+  if (!pattern.contains('*') &&
+      !pattern.startsWith('+.') &&
+      !pattern.startsWith('.')) {
     return domains.any((d) => d.toLowerCase() == pattern);
   }
 
@@ -67,12 +69,16 @@ bool matchDomainPattern(String pattern, Iterable<String> domains) {
 
   if (pattern.startsWith('+.')) {
     final suffix = pattern.substring(2);
-    return domainList.any((domain) => domain == suffix || domain.endsWith('.$suffix'));
+    return domainList.any(
+      (domain) => domain == suffix || domain.endsWith('.$suffix'),
+    );
   }
 
   if (pattern.startsWith('.')) {
     final suffix = pattern.substring(1);
-    return domainList.any((domain) => domain != suffix && domain.endsWith('.$suffix'));
+    return domainList.any(
+      (domain) => domain != suffix && domain.endsWith('.$suffix'),
+    );
   }
 
   final patternParts = pattern.split('.');
@@ -93,15 +99,21 @@ String stripDnsSuffix(String dns) {
   return dns.substring(0, hashIndex);
 }
 
-List<dynamic> applyHostsToProxies(List<dynamic> proxies, Map<String, dynamic>? hosts) {
+List<dynamic> applyHostsToProxies(
+  List<dynamic> proxies,
+  Map<String, dynamic>? hosts,
+) {
   if (hosts == null || hosts.isEmpty) return proxies;
 
-  final hostEntries = hosts.entries
-      .where((entry) =>
-          (entry.value is String && (entry.value as String).isNotEmpty) ||
-          (entry.value is List && (entry.value as List).isNotEmpty))
-      .toList()
-    ..sort((a, b) => hostSpecificity(b.key) - hostSpecificity(a.key));
+  final hostEntries =
+      hosts.entries
+          .where(
+            (entry) =>
+                (entry.value is String && (entry.value as String).isNotEmpty) ||
+                (entry.value is List && (entry.value as List).isNotEmpty),
+          )
+          .toList()
+        ..sort((a, b) => hostSpecificity(b.key) - hostSpecificity(a.key));
   if (hostEntries.isEmpty) return proxies;
 
   String? targetOf(dynamic value) {
@@ -159,7 +171,8 @@ void applyDnsNodeOverride(
   final proxyServerNameservers =
       (originalDns['proxy-server-nameserver'] as List?)?.cast<String>() ?? [];
   final listenValue = originalDns['listen'];
-  final shouldRewriteByHosts = proxyServerNameservers.length == 1 &&
+  final shouldRewriteByHosts =
+      proxyServerNameservers.length == 1 &&
       listenValue is String &&
       listenValue.isNotEmpty &&
       proxyServerNameservers.any(
@@ -168,8 +181,9 @@ void applyDnsNodeOverride(
 
   final proxies = (rawConfig['proxies'] as List?) ?? const [];
 
-  final mappedProxies =
-      shouldRewriteByHosts ? applyHostsToProxies(proxies, originalHosts) : proxies;
+  final mappedProxies = shouldRewriteByHosts
+      ? applyHostsToProxies(proxies, originalHosts)
+      : proxies;
   if (!identical(mappedProxies, proxies)) {
     rawConfig['proxies'] = mappedProxies;
   }
@@ -200,7 +214,10 @@ void applyDnsNodeOverride(
   bool isCommonDns(String dns) => commonDnsRegex.hasMatch(dns);
 
   final privateDNS = <String>{};
-  for (final dns in [...(originalDns['nameserver'] as List? ?? const []), ...proxyServerNameservers]) {
+  for (final dns in [
+    ...(originalDns['nameserver'] as List? ?? const []),
+    ...proxyServerNameservers,
+  ]) {
     final stripped = stripDnsSuffix(dns.toString());
     if (stripped.isNotEmpty && !isCommonDns(stripped)) {
       privateDNS.add(stripped);
@@ -209,7 +226,8 @@ void applyDnsNodeOverride(
 
   final originalPolicy = <String, dynamic>{
     ...?((originalDns['nameserver-policy'] as Map?)?.cast<String, dynamic>()),
-    ...?((originalDns['proxy-server-nameserver-policy'] as Map?)?.cast<String, dynamic>()),
+    ...?((originalDns['proxy-server-nameserver-policy'] as Map?)
+        ?.cast<String, dynamic>()),
   };
   final proxyServerPolicy = <String, dynamic>{};
   for (final entry in originalPolicy.entries) {
@@ -217,14 +235,18 @@ void applyDnsNodeOverride(
 
     final value = entry.value;
     final strippedValue = value is List
-        ? value.map((item) => stripDnsSuffix(item.toString())).where((item) => item.isNotEmpty).toList()
+        ? value
+              .map((item) => stripDnsSuffix(item.toString()))
+              .where((item) => item.isNotEmpty)
+              .toList()
         : stripDnsSuffix(value.toString());
     if (strippedValue is List && strippedValue.isEmpty) continue;
 
     proxyServerPolicy[entry.key] = strippedValue;
   }
 
-  final originalFakeIpFilter = (originalDns['fake-ip-filter'] as List?) ?? const [];
+  final originalFakeIpFilter =
+      (originalDns['fake-ip-filter'] as List?) ?? const [];
   final proxyFakeIpFilter = originalFakeIpFilter
       .where((pattern) => matchDomainPattern(pattern.toString(), proxyDomains))
       .map((pattern) => pattern.toString())

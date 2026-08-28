@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/utils/platform_check.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/utils/platform_check.dart';
 import 'package:restart_app/restart_app.dart';
 
 class ExternalControl {
@@ -109,7 +109,7 @@ class ExternalControl {
       }
     }
 
-    throw StateError('Bettbox is not running');
+    throw StateError('KitonyBox is not running');
   }
 
   static Future<void> _sendUnixCommand(

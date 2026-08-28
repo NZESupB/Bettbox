@@ -4,15 +4,15 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:archive/archive_io.dart';
-import 'package:bett_box/clash/clash.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/helper/helper.dart';
+import 'package:kitony_box/clash/clash.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/helper/helper.dart';
 
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/plugins/service.dart' as vpn_service;
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/dialog.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/plugins/service.dart' as vpn_service;
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/dialog.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -388,8 +388,9 @@ class AppController {
 
   Future<bool> _shouldUpdateDashboardTick() async {
     if (system.isDesktop) {
-      final isPinned =
-          _ref.read(windowSettingProvider.select((s) => s.isPinned));
+      final isPinned = _ref.read(
+        windowSettingProvider.select((s) => s.isPinned),
+      );
       if (isPinned) return true;
       if (await window?.isVisible == false) return false;
       if (await window?.isMinimized == true) return false;
@@ -437,7 +438,7 @@ class AppController {
       final profile = profiles
           .where((e) => e.id == currentProfileId)
           .firstOrNull;
-      final profileName = profile?.label ?? 'Bettbox';
+      final profileName = profile?.label ?? 'KitonyBox';
       final speedInfo = traffic.toString();
       await vpn_service.service?.updateNotificationSpeed(
         profileName,
@@ -489,9 +490,9 @@ class AppController {
     _updatingProfileIds.add(profile.id);
     try {
       final newProfile = await profile.update(validate: validate);
-      _ref.read(profilesProvider.notifier).setProfile(
-            newProfile.copyWith(isUpdating: false),
-          );
+      _ref
+          .read(profilesProvider.notifier)
+          .setProfile(newProfile.copyWith(isUpdating: false));
       if (profile.id == _ref.read(currentProfileIdProvider)) {
         applyProfileDebounce(silence: true);
       }
@@ -1114,7 +1115,7 @@ class AppController {
             ? tagName.substring(1)
             : tagName;
         downloadUrl =
-            'https://github.com/$repository/releases/download/$tagName/Bettbox-$versionWithoutV-$assetSuffix';
+            'https://github.com/$repository/releases/download/$tagName/KitonyBox-$versionWithoutV-$assetSuffix';
       }
 
       globalState.openUrl(downloadUrl);
@@ -1473,8 +1474,9 @@ class AppController {
         ageSecretKey: ageSecretKey,
       ).update();
       if (globalState.navigatorKey.currentState?.canPop() ?? false) {
-        globalState.navigatorKey.currentState
-            ?.popUntil((route) => route.isFirst);
+        globalState.navigatorKey.currentState?.popUntil(
+          (route) => route.isFirst,
+        );
       }
       toProfiles();
       await addProfile(profile);
@@ -1765,14 +1767,14 @@ class AppController {
       final tempDir = Directory.systemTemp;
       final tempZipPath = join(
         tempDir.path,
-        'bettbox_backup_${DateTime.now().millisecondsSinceEpoch}.zip',
+        'kitonybox_backup_${DateTime.now().millisecondsSinceEpoch}.zip',
       );
       final encoder = ZipFileEncoder();
       encoder.create(tempZipPath);
 
       // Add marker file
       final markerData = json.encode({
-        'app': 'Bettbox',
+        'app': 'KitonyBox',
         'version': '1.0',
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
@@ -1780,11 +1782,11 @@ class AppController {
       final tempMarkerFile = File(
         join(
           tempDir.path,
-          'bettbox_marker_${DateTime.now().millisecondsSinceEpoch}.tmp',
+          'kitonybox_marker_${DateTime.now().millisecondsSinceEpoch}.tmp',
         ),
       );
       await tempMarkerFile.writeAsBytes(markerBytes);
-      await encoder.addFile(tempMarkerFile, '.bettbox_marker');
+      await encoder.addFile(tempMarkerFile, '.kitonybox_marker');
       await tempMarkerFile.delete();
 
       // Add config file
@@ -1792,7 +1794,7 @@ class AppController {
       final tempConfigFile = File(
         join(
           tempDir.path,
-          'bettbox_config_${DateTime.now().millisecondsSinceEpoch}.tmp',
+          'kitonybox_config_${DateTime.now().millisecondsSinceEpoch}.tmp',
         ),
       );
       await tempConfigFile.writeAsString(configStr);
@@ -1940,22 +1942,22 @@ class AppController {
 
     final homeDirPath = await appPath.homeDirPath;
 
-    // Check for Bettbox marker
-    final hasBettboxMarker = archive.files.any(
-      (file) => file.name == '.bettbox_marker',
+    // Check for KitonyBox marker
+    final hasKitonyBoxMarker = archive.files.any(
+      (file) => file.name == '.kitonybox_marker',
     );
 
-    if (hasBettboxMarker) {
-      // Bettbox backup
-      await _recoveryBettboxBackup(archive, recoveryOption, homeDirPath);
+    if (hasKitonyBoxMarker) {
+      // KitonyBox backup
+      await _recoveryKitonyBoxBackup(archive, recoveryOption, homeDirPath);
     } else {
       // Legacy backup
       await _recoveryLegacyBackup(archive, recoveryOption, homeDirPath);
     }
   }
 
-  /// Restore Bettbox
-  Future<void> _recoveryBettboxBackup(
+  /// Restore KitonyBox
+  Future<void> _recoveryKitonyBoxBackup(
     Archive archive,
     RecoveryOption recoveryOption,
     String homeDirPath,
@@ -1964,11 +1966,12 @@ class AppController {
     final configs = archive.files
         .where(
           (item) =>
-              item.name.endsWith('.json') && item.name != '.bettbox_marker',
+              item.name.endsWith('.json') && item.name != '.kitonybox_marker',
         )
         .toList();
     final profiles = archive.files.where(
-      (item) => !item.name.endsWith('.json') && item.name != '.bettbox_marker',
+      (item) =>
+          !item.name.endsWith('.json') && item.name != '.kitonybox_marker',
     );
 
     // Find config.json
@@ -2348,8 +2351,6 @@ class AppController {
     // Ensure current profile exists
     _ensureCurrentProfile(profiles);
   }
-
-
 
   Future<T?> safeRun<T>(
     FutureOr<T> Function() futureFunction, {

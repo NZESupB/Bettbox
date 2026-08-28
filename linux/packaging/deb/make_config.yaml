@@ -1,5 +1,5 @@
-display_name: Bettbox
-package_name: Bettbox
+display_name: KitonyBox
+package_name: KitonyBox
 maintainer:
   name: appshub
   email: appshubcc@gmail.com
@@ -15,30 +15,30 @@ dependencies:
   - libkeybinder-3.0-dev
 
 keywords:
-  - Bettbox
+  - KitonyBox
   - Clash
   - ClashMeta
   - Mihomo
   - Proxy
 
-generic_name: Bettbox
+generic_name: KitonyBox
 
 categories:
   - Network
 
 startup_notify: true
-startup_wm_class: com.appshub.bettbox
+startup_wm_class: com.appshub.kitonybox
 
 postinstall_scripts:
   - |
-    CORE_PATH="/usr/share/Bettbox/BettboxCore"
+    CORE_PATH="/usr/share/KitonyBox/KitonyBoxCore"
     if [ -f "$CORE_PATH" ]; then
       chown root:root "$CORE_PATH" 2>/dev/null || true
       chmod +sx "$CORE_PATH" 2>/dev/null || true
     fi
 postuninstall_scripts:
   - |
-    CORE_PATH="/usr/share/Bettbox/BettboxCore"
+    CORE_PATH="/usr/share/KitonyBox/KitonyBoxCore"
     if [ -f "$CORE_PATH" ]; then
       chmod -s "$CORE_PATH" 2>/dev/null || true
     fi

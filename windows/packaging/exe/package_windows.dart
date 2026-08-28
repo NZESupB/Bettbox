@@ -28,7 +28,10 @@ void main(List<String> arguments) async {
     exit(1);
   }
   final pubspecContent = pubspecFile.readAsStringSync();
-  final versionMatch = RegExp(r'^version:\s*([^\s+]+)', multiLine: true).firstMatch(pubspecContent);
+  final versionMatch = RegExp(
+    r'^version:\s*([^\s+]+)',
+    multiLine: true,
+  ).firstMatch(pubspecContent);
   if (versionMatch == null) {
     print('Error: Could not find version in pubspec.yaml.');
     exit(1);
@@ -36,7 +39,7 @@ void main(List<String> arguments) async {
   final appVersion = versionMatch.group(1)!;
   print('App Version: $appVersion');
 
-  final outputBaseName = 'Bettbox-$appVersion-windows-$desc-setup';
+  final outputBaseName = 'KitonyBox-$appVersion-windows-$desc-setup';
 
   // 2. Parse make_config.yaml
   final configFile = File('windows/packaging/exe/make_config.yaml');
@@ -52,16 +55,24 @@ void main(List<String> arguments) async {
   final sourceDir = path.absolute('build/windows/$buildDirName/runner/Release');
   print('Source Directory: $sourceDir');
   if (!Directory(sourceDir).existsSync()) {
-    print('Error: Source directory $sourceDir does not exist. Run flutter build first.');
+    print(
+      'Error: Source directory $sourceDir does not exist. Run flutter build first.',
+    );
     exit(1);
   }
 
   // 4. Map variables for Inno Setup template
-  final coreExecutableName = isDev ? 'BettboxDevCore.exe' : 'BettboxCore.exe';
-  final helperExecutableName = isDev ? 'BettboxDevHelperService.exe' : 'BettboxHelperService.exe';
-  final helperServiceName = isDev ? 'BettboxDevHelperService' : 'BettboxHelperService';
-  final taskName = isDev ? 'Bettbox Dev' : 'Bettbox';
-  
+  final coreExecutableName = isDev
+      ? 'KitonyBoxDevCore.exe'
+      : 'KitonyBoxCore.exe';
+  final helperExecutableName = isDev
+      ? 'KitonyBoxDevHelperService.exe'
+      : 'KitonyBoxHelperService.exe';
+  final helperServiceName = isDev
+      ? 'KitonyBoxDevHelperService'
+      : 'KitonyBoxHelperService';
+  final taskName = isDev ? 'KitonyBox Dev' : 'KitonyBox';
+
   // Format locales - resolve file paths to absolute to avoid Inno Setup relative path issues
   final packagingDir = path.absolute('windows/packaging/exe');
   final locales = [];
@@ -71,7 +82,9 @@ void main(List<String> arguments) async {
       locales.add({
         'lang': locale['lang'],
         // Extract just the filename and resolve against the packaging directory
-        'file': fileVal != null ? path.join(packagingDir, path.basename(fileVal)) : null,
+        'file': fileVal != null
+            ? path.join(packagingDir, path.basename(fileVal))
+            : null,
       });
     }
   }
@@ -80,14 +93,16 @@ void main(List<String> arguments) async {
     'APP_ID': makeConfig['app_id'],
     'APP_NAME': makeConfig['app_name'],
     'APP_VERSION': appVersion,
-    'EXECUTABLE_NAME': makeConfig['executable_name'] ?? 'Bettbox.exe',
-    'DISPLAY_NAME': makeConfig['display_name'] ?? 'Bettbox',
+    'EXECUTABLE_NAME': makeConfig['executable_name'] ?? 'KitonyBox.exe',
+    'DISPLAY_NAME': makeConfig['display_name'] ?? 'KitonyBox',
     'PUBLISHER_NAME': makeConfig['publisher'] ?? 'appshub.cc',
     'ARCH': arch == 'arm64' ? 'arm64' : 'x64',
-    'PUBLISHER_URL': makeConfig['publisher_url'] ?? 'https://github.com/appshubcc/Bettbox',
+    'PUBLISHER_URL':
+        makeConfig['publisher_url'] ?? 'https://github.com/appshubcc/Bettbox',
     'CREATE_DESKTOP_ICON': true,
     'LAUNCH_AT_STARTUP': true,
-    'INSTALL_DIR_NAME': '{autopf64}\\${makeConfig['display_name'] ?? 'Bettbox'}',
+    'INSTALL_DIR_NAME':
+        '{autopf64}\\${makeConfig['display_name'] ?? 'KitonyBox'}',
     'SOURCE_DIR': sourceDir,
     'OUTPUT_BASE_FILENAME': outputBaseName,
     'LOCALES': locales,
@@ -110,10 +125,7 @@ void main(List<String> arguments) async {
   final context = Context.create();
   context.variables = variables;
 
-  final template = Template.parse(
-    context,
-    Source.fromString(templateContent),
-  );
+  final template = Template.parse(context, Source.fromString(templateContent));
 
   final renderedContent = '\uFEFF${await template.render(context)}';
   final tempIssFile = File('windows/packaging/exe/temp_setup.iss');
@@ -144,7 +156,10 @@ void main(List<String> arguments) async {
   }
 
   // 7. Move generated installer to dist/
-  final generatedInstallerPath = path.join('windows/packaging/exe', '$outputBaseName.exe');
+  final generatedInstallerPath = path.join(
+    'windows/packaging/exe',
+    '$outputBaseName.exe',
+  );
   final generatedInstallerFile = File(generatedInstallerPath);
   if (!generatedInstallerFile.existsSync()) {
     print('Error: Generated installer not found at $generatedInstallerPath');

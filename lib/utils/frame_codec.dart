@@ -25,7 +25,11 @@ class FrameDecoder {
 
     try {
       while (buffer.length - offset >= 4) {
-        final view = ByteData.view(buffer.buffer, buffer.offsetInBytes + offset, 4);
+        final view = ByteData.view(
+          buffer.buffer,
+          buffer.offsetInBytes + offset,
+          4,
+        );
         final length = view.getUint32(0, Endian.little);
 
         if (length > 10 * 1024 * 1024 || length < 0) {
@@ -46,11 +50,13 @@ class FrameDecoder {
       }
 
       if (offset < buffer.length) {
-        _builder.add(Uint8List.view(
-          buffer.buffer,
-          buffer.offsetInBytes + offset,
-          buffer.length - offset,
-        ));
+        _builder.add(
+          Uint8List.view(
+            buffer.buffer,
+            buffer.offsetInBytes + offset,
+            buffer.length - offset,
+          ),
+        );
       }
     } catch (e) {
       _builder.clear();

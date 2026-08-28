@@ -1,6 +1,6 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/providers/config.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/providers/config.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -144,7 +144,6 @@ class HiddenItem extends ConsumerWidget {
   }
 }
 
-
 class ShowStartSwitchItem extends ConsumerWidget {
   const ShowStartSwitchItem({super.key});
 
@@ -252,8 +251,7 @@ class ApplicationSettingView extends StatelessWidget {
       AutoRunItem(),
       if (system.isAndroid) ...[HiddenItem()],
       if (system.isDesktop) ...[
-        if (system.isWindows || system.isLinux)
-          const AlwaysShowTitleBarItem(),
+        if (system.isWindows || system.isLinux) const AlwaysShowTitleBarItem(),
       ],
       const ShowStartSwitchItem(),
       if (system.isAndroid) ...[NavBarHapticFeedbackItem()],

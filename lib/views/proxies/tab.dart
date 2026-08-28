@@ -1,11 +1,11 @@
 import 'dart:math';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/config.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/config.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -211,18 +211,21 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
   @override
   Widget build(BuildContext context) {
     ref.watch(themeSettingProvider.select((state) => state.textScale));
-    final groups =
-        ref.watch(proxiesTabStateProvider.select((state) => state.groups));
-    final columns =
-        ref.watch(proxiesTabStateProvider.select((state) => state.columns));
+    final groups = ref.watch(
+      proxiesTabStateProvider.select((state) => state.groups),
+    );
+    final columns = ref.watch(
+      proxiesTabStateProvider.select((state) => state.columns),
+    );
     final cardType = ref.watch(
       proxiesTabStateProvider.select((state) => state.proxyCardType),
     );
     final sortType = ref.watch(
       proxiesTabStateProvider.select((state) => state.proxiesSortType),
     );
-    final sortNum =
-        ref.watch(proxiesTabStateProvider.select((state) => state.sortNum));
+    final sortNum = ref.watch(
+      proxiesTabStateProvider.select((state) => state.sortNum),
+    );
 
     if (groups.isEmpty) {
       return NullStatus(
@@ -276,9 +279,7 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
                     controller: _tabController,
                     padding: EdgeInsets.only(
                       left: 16,
-                      right: globalState.isAndroidTV
-                          ? 48
-                          : (value ? 48 : 0),
+                      right: globalState.isAndroidTV ? 48 : (value ? 48 : 0),
                     ),
                     dividerColor: Colors.transparent,
                     isScrollable: true,
@@ -319,10 +320,7 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
                       right: 0,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildDelayTestButton(),
-                          if (value) child!,
-                        ],
+                        children: [_buildDelayTestButton(), if (value) child!],
                       ),
                     )
                   else if (value)

@@ -1,8 +1,8 @@
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -147,10 +147,7 @@ CoreState coreState(Ref ref) {
 
 @riverpod
 UpdateParams updateParams(Ref ref) {
-  final (
-    :bypassPrivateRoute,
-    :realBypassPrivateRouteAddress,
-  ) = ref.watch(
+  final (:bypassPrivateRoute, :realBypassPrivateRouteAddress) = ref.watch(
     networkSettingProvider.select(
       (state) => (
         bypassPrivateRoute: state.bypassPrivateRoute,

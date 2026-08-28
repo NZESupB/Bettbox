@@ -3,10 +3,10 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
 import 'package:flutter/foundation.dart';
-import 'package:bett_box/l10n/l10n.dart';
+import 'package:kitony_box/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lpinyin/lpinyin.dart';
@@ -96,22 +96,24 @@ class Utils {
   Locale getSystemLocale() {
     final platformLocale = WidgetsBinding.instance.platformDispatcher.locale;
     final supportedLocales = AppLocalizations.delegate.supportedLocales;
-    
+
     if (platformLocale.languageCode.toLowerCase() == 'zh') {
-      final isTraditional = 
-        (platformLocale.countryCode?.toUpperCase() == 'TW') ||
-        (platformLocale.countryCode?.toUpperCase() == 'HK') ||
-        (platformLocale.countryCode?.toUpperCase() == 'MO') ||
-        (platformLocale.scriptCode?.toLowerCase() == 'hant');
-      return isTraditional ? const Locale('zh', 'TC') : const Locale('zh', 'CN');
+      final isTraditional =
+          (platformLocale.countryCode?.toUpperCase() == 'TW') ||
+          (platformLocale.countryCode?.toUpperCase() == 'HK') ||
+          (platformLocale.countryCode?.toUpperCase() == 'MO') ||
+          (platformLocale.scriptCode?.toLowerCase() == 'hant');
+      return isTraditional
+          ? const Locale('zh', 'TC')
+          : const Locale('zh', 'CN');
     }
-    
+
     for (final locale in supportedLocales) {
       if (locale.languageCode == platformLocale.languageCode) {
         return locale;
       }
     }
-    
+
     return const Locale('zh', 'CN');
   }
 
@@ -253,12 +255,14 @@ class Utils {
     return regex
         .allMatches(body)
         .map((match) => match.group(1)?.trim() ?? '')
-        .where((item) =>
-            item.isNotEmpty &&
-            !item.startsWith('---') &&
-            !item.startsWith(':') &&
-            !item.startsWith('|') &&
-            !item.startsWith('['))
+        .where(
+          (item) =>
+              item.isNotEmpty &&
+              !item.startsWith('---') &&
+              !item.startsWith(':') &&
+              !item.startsWith('|') &&
+              !item.startsWith('['),
+        )
         .toList();
   }
 
@@ -370,7 +374,6 @@ class Utils {
     final control = system.isMacOS ? false : true;
     return SingleActivator(trigger, control: control, meta: !control);
   }
-
 
   FutureOr<T> handleWatch<T>(Function function) async {
     if (kDebugMode) {

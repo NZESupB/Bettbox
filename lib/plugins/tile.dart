@@ -1,4 +1,4 @@
-import 'package:bett_box/common/system.dart';
+import 'package:kitony_box/common/system.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -25,13 +25,21 @@ class Tile {
   Future<void> _methodCallHandler(MethodCall call) async {
     switch (call.method) {
       case 'start':
-        for (final l in _listeners) { l.onStart(); }
+        for (final l in _listeners) {
+          l.onStart();
+        }
       case 'stop':
-        for (final l in _listeners) { l.onStop(); }
+        for (final l in _listeners) {
+          l.onStop();
+        }
       case 'detached':
-        for (final l in _listeners) { l.onDetached(); }
+        for (final l in _listeners) {
+          l.onDetached();
+        }
       case 'reconnectIpc':
-        for (final l in _listeners) { l.onReconnectIpc(); }
+        for (final l in _listeners) {
+          l.onReconnectIpc();
+        }
     }
   }
 

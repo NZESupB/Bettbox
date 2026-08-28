@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/config.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -31,10 +31,7 @@ void main() {
     });
 
     test('从没有 hasCustomizedStyle 字段的旧 JSON 反序列化时默认为 false', () {
-      final oldJson = {
-        'type': 'tab',
-        'iconStyle': 'none',
-      };
+      final oldJson = {'type': 'tab', 'iconStyle': 'none'};
 
       final restored = ProxiesStyle.fromJson(oldJson);
 

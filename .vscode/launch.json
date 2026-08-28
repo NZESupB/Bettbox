@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Bettbox Windows Dev",
+      "name": "KitonyBox Windows Dev",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
@@ -12,10 +12,10 @@
         "--dart-define",
         "APP_DEV=true"
       ],
-      "preLaunchTask": "bettbox: ensure windows dev core"
+      "preLaunchTask": "kitonybox: ensure windows dev core"
     },
     {
-      "name": "Bettbox macOS Dev",
+      "name": "KitonyBox macOS Dev",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
@@ -25,10 +25,10 @@
         "--dart-define",
         "APP_DEV=true"
       ],
-      "preLaunchTask": "bettbox: ensure macos dev core"
+      "preLaunchTask": "kitonybox: ensure macos dev core"
     },
     {
-      "name": "Bettbox Linux Dev",
+      "name": "KitonyBox Linux Dev",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
@@ -38,10 +38,10 @@
         "--dart-define",
         "APP_DEV=true"
       ],
-      "preLaunchTask": "bettbox: ensure linux dev core"
+      "preLaunchTask": "kitonybox: ensure linux dev core"
     },
     {
-      "name": "Bettbox Android x64 Dev",
+      "name": "KitonyBox Android x64 Dev",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
@@ -50,10 +50,10 @@
         "--dart-define",
         "APP_DEV=true"
       ],
-      "preLaunchTask": "bettbox: ensure android x64 core"
+      "preLaunchTask": "kitonybox: ensure android x64 core"
     },
     {
-      "name": "Bettbox Android arm64 Dev",
+      "name": "KitonyBox Android arm64 Dev",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
@@ -62,7 +62,7 @@
         "--dart-define",
         "APP_DEV=true"
       ],
-      "preLaunchTask": "bettbox: ensure android arm64 core"
+      "preLaunchTask": "kitonybox: ensure android arm64 core"
     }
   ]
 }

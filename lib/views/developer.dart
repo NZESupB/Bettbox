@@ -1,8 +1,8 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/models/common.dart';
-import 'package:bett_box/providers/config.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/models/common.dart';
+import 'package:kitony_box/providers/config.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,9 +22,7 @@ class DeveloperView extends ConsumerWidget {
           onChanged: (value) {
             ref
                 .read(appSettingProvider.notifier)
-                .updateState(
-                  (state) => state.copyWith(developerMode: value),
-                );
+                .updateState((state) => state.copyWith(developerMode: value));
           },
         ),
       ),
@@ -55,9 +53,7 @@ class DeveloperView extends ConsumerWidget {
             onTap: () async {
               final res = await globalState.showMessage(
                 title: appLocalizations.clearDataTipTitle,
-                message: TextSpan(
-                  text: appLocalizations.clearDataTipDesc,
-                ),
+                message: TextSpan(text: appLocalizations.clearDataTipDesc),
               );
               if (res != true) return;
               await globalState.appController.handleClear();

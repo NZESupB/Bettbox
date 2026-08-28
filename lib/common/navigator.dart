@@ -1,6 +1,6 @@
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/app.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/app.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/cupertino.dart';
 
 class BaseNavigator {
@@ -10,18 +10,14 @@ class BaseNavigator {
     bool maintainState = true,
   }) async {
     if (globalState.appState.viewMode != ViewMode.mobile) {
-      return await Navigator.of(
-        context,
-      ).push<T>(
+      return await Navigator.of(context).push<T>(
         CommonDesktopRoute(
           builder: (context) => child,
           maintainState: maintainState,
         ),
       );
     }
-    return await Navigator.of(
-      context,
-    ).push<T>(
+    return await Navigator.of(context).push<T>(
       _CleanCupertinoPageRoute(
         builder: (context) => child,
         maintainState: maintainState,
@@ -46,10 +42,7 @@ class _CleanCupertinoPageRoute<T> extends CupertinoPageRoute<T> {
 class CommonDesktopRoute<T> extends PageRoute<T> {
   final Widget Function(BuildContext context) builder;
 
-  CommonDesktopRoute({
-    required this.builder,
-    this.maintainState = true,
-  });
+  CommonDesktopRoute({required this.builder, this.maintainState = true});
 
   @override
   final bool maintainState;

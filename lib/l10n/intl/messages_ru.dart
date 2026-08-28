@@ -338,7 +338,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Удалить перенаправление",
     ),
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Bettbox основан на мощном и гибком прокси-ядре Mihomo (Clash.Meta) и стремится к созданию лучшего пользовательского опыта. Форк от FlClash: Улучшенный опыт, готов к работе «из коробки»",
+      "KitonyBox основан на мощном и гибком прокси-ядре Mihomo (Clash.Meta) и стремится к созданию лучшего пользовательского опыта. Форк от FlClash: Улучшенный опыт, готов к работе «из коробки»",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("Адрес назначения"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage(
@@ -1267,6 +1267,69 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystem": MessageLookupByLibrary.simpleMessage("Записать в систему"),
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Требуются права администратора",
+    ),
+    "xboardAccount": MessageLookupByLibrary.simpleMessage("Аккаунт панели"),
+    "xboardAccountDesc": MessageLookupByLibrary.simpleMessage(
+      "Войдите в аккаунт панели и автоматически синхронизируйте подписку",
+    ),
+    "xboardEmail": MessageLookupByLibrary.simpleMessage("Email"),
+    "xboardEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "Неверный формат email",
+    ),
+    "xboardEmailNull": MessageLookupByLibrary.simpleMessage("Введите email"),
+    "xboardExpireAt": MessageLookupByLibrary.simpleMessage("Срок действия"),
+    "xboardLastSync": MessageLookupByLibrary.simpleMessage(
+      "Последняя синхронизация",
+    ),
+    "xboardLinkedProfile": MessageLookupByLibrary.simpleMessage(
+      "Связанная подписка",
+    ),
+    "xboardLogin": MessageLookupByLibrary.simpleMessage("Войти"),
+    "xboardLoginFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось войти",
+    ),
+    "xboardLoginHint": MessageLookupByLibrary.simpleMessage(
+      "Войдите с email и паролем панели. Подписка будет импортирована автоматически.",
+    ),
+    "xboardLogout": MessageLookupByLibrary.simpleMessage("Выйти"),
+    "xboardLogoutConfirm": MessageLookupByLibrary.simpleMessage(
+      "Выйти из аккаунта?",
+    ),
+    "xboardNeverExpires": MessageLookupByLibrary.simpleMessage(
+      "Без срока действия",
+    ),
+    "xboardNotLoggedIn": MessageLookupByLibrary.simpleMessage("Не авторизован"),
+    "xboardPersistFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось сохранить данные аккаунта локально",
+    ),
+    "xboardPassword": MessageLookupByLibrary.simpleMessage("Пароль"),
+    "xboardPasswordNull": MessageLookupByLibrary.simpleMessage(
+      "Введите пароль",
+    ),
+    "xboardPlan": MessageLookupByLibrary.simpleMessage("Тариф"),
+    "xboardRefreshInfo": MessageLookupByLibrary.simpleMessage(
+      "Обновить информацию",
+    ),
+    "xboardRelogin": MessageLookupByLibrary.simpleMessage("Войти снова"),
+    "xboardSessionExpired": MessageLookupByLibrary.simpleMessage(
+      "Сессия истекла, войдите снова",
+    ),
+    "xboardSignedIn": MessageLookupByLibrary.simpleMessage("Авторизован"),
+    "xboardStatus": MessageLookupByLibrary.simpleMessage("Статус"),
+    "xboardSyncSubscription": MessageLookupByLibrary.simpleMessage(
+      "Синхронизировать подписку",
+    ),
+    "xboardSyncSubscriptionFailed": MessageLookupByLibrary.simpleMessage(
+      "Не удалось синхронизировать подписку, повторите позже",
+    ),
+    "xboardSyncSubscriptionSuccess": MessageLookupByLibrary.simpleMessage(
+      "Подписка синхронизирована",
+    ),
+    "xboardTrafficRemaining": MessageLookupByLibrary.simpleMessage(
+      "Осталось трафика",
+    ),
+    "xboardTrafficUsage": MessageLookupByLibrary.simpleMessage(
+      "Использование трафика",
     ),
     "years": m14,
   };

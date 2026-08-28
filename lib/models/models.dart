@@ -1,4 +1,6 @@
+export 'account.dart';
 export 'app.dart';
+export 'auth_session.dart';
 export 'clash_config.dart';
 export 'common.dart';
 export 'config.dart';

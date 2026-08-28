@@ -1624,10 +1624,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Bettbox is based on the powerful and flexible Mihomo (Clash.Meta) proxy kernel, dedicated to a superior user experience. Forked from FlClash: Better Experience, Out of the box`
+  /// `KitonyBox is based on the powerful and flexible Mihomo (Clash.Meta) proxy kernel, dedicated to a superior user experience. Forked from FlClash: Better Experience, Out of the box`
   String get desc {
     return Intl.message(
-      'Bettbox is based on the powerful and flexible Mihomo (Clash.Meta) proxy kernel, dedicated to a superior user experience. Forked from FlClash: Better Experience, Out of the box',
+      'KitonyBox is based on the powerful and flexible Mihomo (Clash.Meta) proxy kernel, dedicated to a superior user experience. Forked from FlClash: Better Experience, Out of the box',
       name: 'desc',
       desc: '',
       args: [],
@@ -5497,6 +5497,266 @@ class AppLocalizations {
   /// `Close All`
   String get closeAll {
     return Intl.message('Close All', name: 'closeAll', desc: '', args: []);
+  }
+
+  /// `Panel Account`
+  String get xboardAccount {
+    return Intl.message(
+      'Panel Account',
+      name: 'xboardAccount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign in to the panel and auto-sync subscription`
+  String get xboardAccountDesc {
+    return Intl.message(
+      'Sign in to the panel and auto-sync subscription',
+      name: 'xboardAccountDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Email`
+  String get xboardEmail {
+    return Intl.message('Email', name: 'xboardEmail', desc: '', args: []);
+  }
+
+  /// `Invalid email format`
+  String get xboardEmailInvalid {
+    return Intl.message(
+      'Invalid email format',
+      name: 'xboardEmailInvalid',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Please enter email`
+  String get xboardEmailNull {
+    return Intl.message(
+      'Please enter email',
+      name: 'xboardEmailNull',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Expire Time`
+  String get xboardExpireAt {
+    return Intl.message(
+      'Expire Time',
+      name: 'xboardExpireAt',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Last Synced`
+  String get xboardLastSync {
+    return Intl.message(
+      'Last Synced',
+      name: 'xboardLastSync',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Linked Subscription`
+  String get xboardLinkedProfile {
+    return Intl.message(
+      'Linked Subscription',
+      name: 'xboardLinkedProfile',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign In`
+  String get xboardLogin {
+    return Intl.message('Sign In', name: 'xboardLogin', desc: '', args: []);
+  }
+
+  /// `Sign in failed`
+  String get xboardLoginFailed {
+    return Intl.message(
+      'Sign in failed',
+      name: 'xboardLoginFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign in with your panel email and password. The subscription will be imported automatically.`
+  String get xboardLoginHint {
+    return Intl.message(
+      'Sign in with your panel email and password. The subscription will be imported automatically.',
+      name: 'xboardLoginHint',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign Out`
+  String get xboardLogout {
+    return Intl.message('Sign Out', name: 'xboardLogout', desc: '', args: []);
+  }
+
+  /// `Sign out?`
+  String get xboardLogoutConfirm {
+    return Intl.message(
+      'Sign out?',
+      name: 'xboardLogoutConfirm',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Never Expires`
+  String get xboardNeverExpires {
+    return Intl.message(
+      'Never Expires',
+      name: 'xboardNeverExpires',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not signed in`
+  String get xboardNotLoggedIn {
+    return Intl.message(
+      'Not signed in',
+      name: 'xboardNotLoggedIn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Failed to save account data locally`
+  String get xboardPersistFailed {
+    return Intl.message(
+      'Failed to save account data locally',
+      name: 'xboardPersistFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Password`
+  String get xboardPassword {
+    return Intl.message('Password', name: 'xboardPassword', desc: '', args: []);
+  }
+
+  /// `Please enter password`
+  String get xboardPasswordNull {
+    return Intl.message(
+      'Please enter password',
+      name: 'xboardPasswordNull',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Plan`
+  String get xboardPlan {
+    return Intl.message('Plan', name: 'xboardPlan', desc: '', args: []);
+  }
+
+  /// `Refresh Info`
+  String get xboardRefreshInfo {
+    return Intl.message(
+      'Refresh Info',
+      name: 'xboardRefreshInfo',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign In Again`
+  String get xboardRelogin {
+    return Intl.message(
+      'Sign In Again',
+      name: 'xboardRelogin',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Session expired, please sign in again`
+  String get xboardSessionExpired {
+    return Intl.message(
+      'Session expired, please sign in again',
+      name: 'xboardSessionExpired',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Signed In`
+  String get xboardSignedIn {
+    return Intl.message(
+      'Signed In',
+      name: 'xboardSignedIn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Status`
+  String get xboardStatus {
+    return Intl.message('Status', name: 'xboardStatus', desc: '', args: []);
+  }
+
+  /// `Sync Subscription`
+  String get xboardSyncSubscription {
+    return Intl.message(
+      'Sync Subscription',
+      name: 'xboardSyncSubscription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription sync failed, please retry later`
+  String get xboardSyncSubscriptionFailed {
+    return Intl.message(
+      'Subscription sync failed, please retry later',
+      name: 'xboardSyncSubscriptionFailed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Subscription synced`
+  String get xboardSyncSubscriptionSuccess {
+    return Intl.message(
+      'Subscription synced',
+      name: 'xboardSyncSubscriptionSuccess',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Remaining Traffic`
+  String get xboardTrafficRemaining {
+    return Intl.message(
+      'Remaining Traffic',
+      name: 'xboardTrafficRemaining',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Traffic Usage`
+  String get xboardTrafficUsage {
+    return Intl.message(
+      'Traffic Usage',
+      name: 'xboardTrafficUsage',
+      desc: '',
+      args: [],
+    );
   }
 }
 

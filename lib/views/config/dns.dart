@@ -1,8 +1,8 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/providers/config.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/providers/config.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -778,9 +778,7 @@ class FallbackConcurrentItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fallbackLazyQuery = ref.watch(
-      patchClashConfigProvider.select(
-        (state) => state.dns.fallbackLazyQuery,
-      ),
+      patchClashConfigProvider.select((state) => state.dns.fallbackLazyQuery),
     );
     final value = !fallbackLazyQuery;
     return ListItem.switchItem(

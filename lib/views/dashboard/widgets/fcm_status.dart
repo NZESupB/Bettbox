@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:bett_box/clash/clash.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/clash/clash.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 
 class FcmStatusData {
@@ -125,9 +125,10 @@ class _FcmStatusState extends State<FcmStatus> {
                           'FCM',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: context.colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: context.colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       ),
                     ),
@@ -176,9 +177,8 @@ class _FcmStatusState extends State<FcmStatus> {
                       } else {
                         return Text(
                           appLocalizations.noStatusAvailable,
-                          style: context.textTheme.bodyMedium?.toLight.adjustSize(
-                            0,
-                          ),
+                          style: context.textTheme.bodyMedium?.toLight
+                              .adjustSize(0),
                         );
                       }
                     },

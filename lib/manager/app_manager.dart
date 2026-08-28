@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:bett_box/clash/core.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/manager/window_manager.dart';
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/clash/core.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/manager/window_manager.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -108,7 +108,8 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
       }
       isMinimized = await window?.isMinimized ?? false;
     }
-    final isPinned = system.isDesktop &&
+    final isPinned =
+        system.isDesktop &&
         ref.read(windowSettingProvider.select((s) => s.isPinned));
     final shouldRun = system.isDesktop
         ? (isPinned || (isVisible && !isMinimized))

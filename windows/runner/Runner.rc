@@ -72,16 +72,16 @@ IDI_APP_ICON            ICON                    "resources\\app_icon.ico"
 #define VERSION_AS_STRING "1.0.0"
 #endif
 
-#ifdef BETTBOX_DEV
-#define APP_FILE_DESCRIPTION "Bettbox Dev"
-#define APP_INTERNAL_NAME "bettbox_dev"
-#define APP_ORIGINAL_FILENAME "Bettbox.exe"
-#define APP_PRODUCT_NAME "Bettbox Dev"
+#ifdef KITONYBOX_DEV
+#define APP_FILE_DESCRIPTION "KitonyBox Dev"
+#define APP_INTERNAL_NAME "kitonybox_dev"
+#define APP_ORIGINAL_FILENAME "KitonyBox.exe"
+#define APP_PRODUCT_NAME "KitonyBox Dev"
 #else
-#define APP_FILE_DESCRIPTION "Bettbox"
-#define APP_INTERNAL_NAME "bettbox"
-#define APP_ORIGINAL_FILENAME "Bettbox.exe"
-#define APP_PRODUCT_NAME "Bettbox"
+#define APP_FILE_DESCRIPTION "KitonyBox"
+#define APP_INTERNAL_NAME "kitonybox"
+#define APP_ORIGINAL_FILENAME "KitonyBox.exe"
+#define APP_PRODUCT_NAME "KitonyBox"
 #endif
 
 VS_VERSION_INFO VERSIONINFO

@@ -1,5 +1,5 @@
-import 'package:bett_box/plugins/tile.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/plugins/tile.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/material.dart';
 
 class TileManager extends StatefulWidget {

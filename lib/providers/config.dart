@@ -1,6 +1,6 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'generated/config.g.dart';
@@ -403,4 +403,3 @@ class HealthCheckTimeout extends _$HealthCheckTimeout
     state = builder(state);
   }
 }
-

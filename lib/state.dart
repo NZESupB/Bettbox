@@ -4,16 +4,16 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:bett_box/clash/clash.dart';
-import 'package:bett_box/common/theme.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/l10n/l10n.dart';
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/plugins/service.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/providers/state.dart' as providers_state;
+import 'package:kitony_box/clash/clash.dart';
+import 'package:kitony_box/common/theme.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/l10n/l10n.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/plugins/service.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/providers/state.dart' as providers_state;
 
-import 'package:bett_box/widgets/dialog.dart';
+import 'package:kitony_box/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as flutter_riverpod;
@@ -125,7 +125,8 @@ class GlobalState {
     if (system.isAndroid) {
       _isAndroidTV = await app.isAndroidTV();
     }
-    config = await preferences.getConfig() ??
+    config =
+        await preferences.getConfig() ??
         Config(
           themeProps: defaultThemeProps,
           patchClashConfig: system.isAndroid
@@ -470,10 +471,7 @@ class GlobalState {
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: const [
-                        BoxShadow(
-                          blurRadius: 10,
-                          color: Colors.black12,
-                        ),
+                        BoxShadow(blurRadius: 10, color: Colors.black12),
                       ],
                     ),
                     child: const Column(
@@ -579,14 +577,16 @@ class GlobalState {
 
     final realPatchConfig = patchConfig.copyWith(
       dns: patchConfig.dns.copyWith(
-        fakeIpRangeV6:
-            patchConfig.dns.effectiveFakeIpRangeV6(ipv6Enabled: patchConfig.ipv6),
+        fakeIpRangeV6: patchConfig.dns.effectiveFakeIpRangeV6(
+          ipv6Enabled: patchConfig.ipv6,
+        ),
       ),
       tun: patchConfig.tun.getRealTun(
         config.networkProps.bypassPrivateRoute,
         fakeIpRange: patchConfig.dns.fakeIpRange,
-        fakeIpRangeV6:
-            patchConfig.dns.effectiveFakeIpRangeV6(ipv6Enabled: patchConfig.ipv6),
+        fakeIpRangeV6: patchConfig.dns.effectiveFakeIpRangeV6(
+          ipv6Enabled: patchConfig.ipv6,
+        ),
         bypassPrivateRouteAddress:
             config.networkProps.realBypassPrivateRouteAddress,
       ),
@@ -756,10 +756,10 @@ class GlobalState {
       if (listen.endsWith(':53')) {
         rawConfig['dns']['listen'] = listen.replaceAll(':53', ':10053');
       }
-      final noProviders = rawConfig['proxy-providers'] == null &&
+      final noProviders =
+          rawConfig['proxy-providers'] == null &&
           rawConfig['rule-providers'] == null;
-      final proxyServerNameserver =
-          rawConfig['dns']['proxy-server-nameserver'];
+      final proxyServerNameserver = rawConfig['dns']['proxy-server-nameserver'];
       final hasLocalProxyServerNameserver = switch (proxyServerNameserver) {
         List list => list.any((e) => e.toString().startsWith('127.0.0.1')),
         String str => str.startsWith('127.0.0.1'),
@@ -906,7 +906,8 @@ class GlobalState {
       rawConfig.remove('rule');
     }
 
-    final scriptActive = config.scriptProps.currentScript != null &&
+    final scriptActive =
+        config.scriptProps.currentScript != null &&
         targetProfile.useScriptOverride;
 
     final overrideData = targetProfile.overrideData;
@@ -1066,8 +1067,7 @@ class DashboardRefreshManager {
     }
 
     final lifecycleState = WidgetsBinding.instance.lifecycleState;
-    if (lifecycleState != null &&
-        lifecycleState != AppLifecycleState.resumed) {
+    if (lifecycleState != null && lifecycleState != AppLifecycleState.resumed) {
       return false;
     }
     return true;
@@ -1143,9 +1143,7 @@ class DetectionState {
   void toggleIpPrivacy() {
     _isIpMasked = !_isIpMasked;
     if (_rawIpInfo != null) {
-      state.value = state.value.copyWith(
-        ipInfo: _maskIpInfo(_rawIpInfo),
-      );
+      state.value = state.value.copyWith(ipInfo: _maskIpInfo(_rawIpInfo));
     }
   }
 
@@ -1226,8 +1224,9 @@ class DetectionState {
     state.value = state.value.copyWith(
       isLoading: false,
       ipInfo: _maskIpInfo(_rawIpInfo),
-      errorMessage:
-          _rawIpInfo != null ? null : appLocalizations.tryManualRefresh,
+      errorMessage: _rawIpInfo != null
+          ? null
+          : appLocalizations.tryManualRefresh,
     );
   }
 

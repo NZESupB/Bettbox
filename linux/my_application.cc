@@ -18,7 +18,7 @@ static gboolean _is_dev_build() {
 
 static gchar* _get_control_socket_path() {
   const gchar* user_data_dir = g_get_user_data_dir();
-  const gchar* name = _is_dev_build() ? "BettboxDev.control.sock" : "Bettbox.control.sock";
+  const gchar* name = _is_dev_build() ? "KitonyBoxDev.control.sock" : "KitonyBox.control.sock";
   return g_build_filename(user_data_dir, APPLICATION_ID, name, nullptr);
 }
 
@@ -101,11 +101,11 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "Bettbox");
+    gtk_header_bar_set_title(header_bar, "KitonyBox");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "Bettbox");
+    gtk_window_set_title(window, "KitonyBox");
   }
 
   gtk_window_set_default_size(window, 1280, 720);
@@ -294,7 +294,7 @@ static gboolean set_window_icon(gboolean use_dark) {
 
 static void save_icon_preference(gboolean use_dark) {
   const gchar* config_dir = g_get_user_config_dir();
-  gchar* app_config_dir = g_build_filename(config_dir, "bettbox", nullptr);
+  gchar* app_config_dir = g_build_filename(config_dir, "kitonybox", nullptr);
 
   g_mkdir_with_parents(app_config_dir, 0755);
 
@@ -315,7 +315,7 @@ static void save_icon_preference(gboolean use_dark) {
 
 static gboolean load_icon_preference() {
   const gchar* config_dir = g_get_user_config_dir();
-  gchar* config_file = g_build_filename(config_dir, "bettbox", "icon_preference", nullptr);
+  gchar* config_file = g_build_filename(config_dir, "kitonybox", "icon_preference", nullptr);
 
   gchar* contents = nullptr;
   GError* error = nullptr;
@@ -359,7 +359,7 @@ static void write_pending_desktop_flag() {
     return;
   }
   const gchar* config_dir = g_get_user_config_dir();
-  gchar* flag_file = g_build_filename(config_dir, "bettbox", "pending_desktop_update", nullptr);
+  gchar* flag_file = g_build_filename(config_dir, "kitonybox", "pending_desktop_update", nullptr);
   GError* error = nullptr;
   g_file_set_contents(flag_file, "1", -1, &error);
   if (error != nullptr) {
@@ -378,7 +378,7 @@ static void apply_pending_desktop_icon(gboolean use_dark) {
   }
 
   const gchar* config_dir = g_get_user_config_dir();
-  gchar* flag_file = g_build_filename(config_dir, "bettbox", "pending_desktop_update", nullptr);
+  gchar* flag_file = g_build_filename(config_dir, "kitonybox", "pending_desktop_update", nullptr);
   gboolean flag_exists = g_file_test(flag_file, G_FILE_TEST_EXISTS);
   g_free(flag_file);
 
@@ -406,9 +406,9 @@ static void apply_pending_desktop_icon(gboolean use_dark) {
   // Determine the .desktop filename. Try multiple candidates to handle
   // packaging tools that differ in capitalisation or use the full app ID.
   const gchar* desktop_candidates[] = {
-    _is_dev_build() ? "Bettbox-dev.desktop" : "Bettbox.desktop",
-    _is_dev_build() ? "bettbox-dev.desktop" : "bettbox.desktop",
-    "com.appshub.bettbox.desktop",
+    _is_dev_build() ? "KitonyBox-dev.desktop" : "KitonyBox.desktop",
+    _is_dev_build() ? "kitonybox-dev.desktop" : "kitonybox.desktop",
+    "com.appshub.kitonybox.desktop",
     nullptr
   };
   const gchar* desktop_filename = desktop_candidates[0];
@@ -498,7 +498,7 @@ static void apply_pending_desktop_icon(gboolean use_dark) {
   }
 
   // Success — remove the pending flag.
-  gchar* done_flag = g_build_filename(config_dir, "bettbox", "pending_desktop_update", nullptr);
+  gchar* done_flag = g_build_filename(config_dir, "kitonybox", "pending_desktop_update", nullptr);
   g_remove(done_flag);
   g_free(done_flag);
 }

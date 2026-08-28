@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/activate_box.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/activate_box.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -71,19 +71,19 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
   Future<void> _checkCameraPermission() async {
     if (_permissionChecking) return; // Prevent concurrent checks
-    
+
     setState(() {
       _permissionChecking = true;
     });
-    
+
     final granted = await app.hasCameraPermission();
     if (!mounted) return;
-    
+
     setState(() {
       _permissionDenied = !granted;
       _permissionChecking = false;
     });
-    
+
     if (!granted) {
       if (controller.value.isRunning) {
         await controller.stop();

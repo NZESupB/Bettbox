@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bett_box/clash/clash.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/models/common.dart';
-import 'package:bett_box/models/core.dart';
-import 'package:bett_box/models/profile.dart';
-import 'package:bett_box/pages/editor.dart';
-import 'package:bett_box/providers/app.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/clash/clash.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/models/common.dart';
+import 'package:kitony_box/models/core.dart';
+import 'package:kitony_box/models/profile.dart';
+import 'package:kitony_box/pages/editor.dart';
+import 'package:kitony_box/providers/app.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -85,20 +85,27 @@ class _ProvidersViewState extends ConsumerState<ProvidersView> {
     final ruleProviders = providers
         .where((item) => item.type == 'Rule')
         .toList();
-    final sections = <({String title, List<ExternalProvider> providers, VoidCallback onSync})>[
-      if (proxyProviders.isNotEmpty)
-        (
-          title: appLocalizations.proxyProviders,
-          providers: proxyProviders,
-          onSync: () => _updateProviders(type: 'Proxy'),
-        ),
-      if (ruleProviders.isNotEmpty)
-        (
-          title: appLocalizations.ruleProviders,
-          providers: ruleProviders,
-          onSync: () => _updateProviders(type: 'Rule'),
-        ),
-    ];
+    final sections =
+        <
+          ({
+            String title,
+            List<ExternalProvider> providers,
+            VoidCallback onSync,
+          })
+        >[
+          if (proxyProviders.isNotEmpty)
+            (
+              title: appLocalizations.proxyProviders,
+              providers: proxyProviders,
+              onSync: () => _updateProviders(type: 'Proxy'),
+            ),
+          if (ruleProviders.isNotEmpty)
+            (
+              title: appLocalizations.ruleProviders,
+              providers: ruleProviders,
+              onSync: () => _updateProviders(type: 'Rule'),
+            ),
+        ];
 
     return RepaintBoundary(
       child: AdaptiveSheetScaffold(

@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'package:bett_box/common/common.dart';
+import 'package:kitony_box/common/common.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/svg.dart';
@@ -63,7 +63,8 @@ class _CommonTargetIconState extends State<CommonTargetIcon> {
     final cacheSize = (widget.size * devicePixelRatio).ceil();
     final key = _moduleCacheKey(cacheSize);
 
-    final cachedFile = _moduleFileCache[key] ?? _findCachedFileForSrc(widget.src);
+    final cachedFile =
+        _moduleFileCache[key] ?? _findCachedFileForSrc(widget.src);
     final syncHit = cachedFile != null;
 
     if (syncHit) {

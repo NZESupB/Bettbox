@@ -168,7 +168,7 @@ class TrayManager {
   }) async {
     final Map<String, dynamic> arguments = {
       'id': defaultTargetPlatform == TargetPlatform.linux
-          ? 'bettbox'
+          ? 'kitonybox'
           : shortid.generate(),
       'iconPath': path.joinAll([
         path.dirname(Platform.resolvedExecutable),

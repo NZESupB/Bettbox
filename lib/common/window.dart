@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/material.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:tray_manager/tray_manager.dart';
@@ -13,7 +13,7 @@ class Window {
     if (system.isWindows) {
       protocol.register('clash');
       protocol.register('clashmeta');
-      protocol.register('bettbox');
+      protocol.register('kitonybox');
     }
     await windowManager.ensureInitialized();
     WindowOptions windowOptions = WindowOptions(
@@ -51,8 +51,7 @@ class Window {
     });
   }
 
-  void updateMacOSBrightness(Brightness brightness) {
-  }
+  void updateMacOSBrightness(Brightness brightness) {}
 
   Future<void> show() async {
     globalState.handleForeground();

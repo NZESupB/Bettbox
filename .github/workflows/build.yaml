@@ -71,6 +71,20 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: Free disk space (Android)
+        if: matrix.platform == 'android'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          df -h /
+          sudo rm -rf /usr/local/lib/android/sdk/system-images
+          sudo rm -rf /usr/local/lib/android/sdk/emulator
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/*
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/powershell
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          df -h /
+
       - name: Setup Rust (Windows)
         if: matrix.platform == 'windows'
         uses: dtolnay/rust-toolchain@stable
@@ -97,21 +111,102 @@ jobs:
         if: matrix.platform == 'windows'
         run: git config --global core.longpaths true
 
-      - name: Setup Keystore (Android)
-        if: matrix.platform == 'android'
-        run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 --decode > android/app/keystore.jks
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/local.properties
-          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> android/local.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/local.properties
-          
       - name: Setup Java (Android)
         if: matrix.platform == 'android'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-          cache: 'gradle'
+
+      # 必须排在 Setup Java 之后：这里要用 JDK 当场校验 keystore，否则坏 keystore
+      # 要等到七分钟后的 Gradle 打包阶段才暴露成
+      # `KeytoolException: Failed to read key ... Tag number over 30 is not supported`。
+      - name: Setup Keystore (Android)
+        if: matrix.platform == 'android'
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          missing=''
+          [ -n "$KEYSTORE_B64" ]   || missing="$missing KEYSTORE"
+          [ -n "$KEY_ALIAS" ]      || missing="$missing KEY_ALIAS"
+          [ -n "$STORE_PASSWORD" ] || missing="$missing STORE_PASSWORD"
+          [ -n "$KEY_PASSWORD" ]   || missing="$missing KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::缺少 Android 签名 Secrets:$missing"
+            exit 1
+          fi
+
+          keystore='android/app/keystore.jks'
+          # 先剥掉所有空白再解码：兼容换行包装的 base64 与粘贴引入的空格/CR。
+          if ! printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' \
+               | base64 --decode > "$keystore" 2>base64.err; then
+            echo "::error::KEYSTORE secret 不是合法 base64，无法解码"
+            cat base64.err
+            exit 1
+          fi
+
+          size=$(wc -c < "$keystore")
+          echo "keystore 解码完成：${size} bytes"
+
+          # 用与 AGP 完全一致的 JDK API 校验：KeyStore.load(storePassword) +
+          # getEntry(alias, keyPassword)。keytool CLI 对 PKCS12 会在 -keypass
+          # 失败时回退到 store 密码，校验不出 key 密码错误，因此不能用它。
+          cat > /tmp/KeystoreProbe.java <<'JAVA'
+          import java.io.FileInputStream;
+          import java.security.KeyStore;
+
+          public class KeystoreProbe {
+              public static void main(String[] args) throws Exception {
+                  KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+                  try (FileInputStream in = new FileInputStream(System.getenv("KEYSTORE_PATH"))) {
+                      ks.load(in, System.getenv("STORE_PASSWORD").toCharArray());
+                  }
+                  String alias = System.getenv("KEY_ALIAS");
+                  if (!ks.containsAlias(alias)) {
+                      throw new IllegalStateException("keystore 中不存在 alias: " + alias);
+                  }
+                  KeyStore.Entry entry = ks.getEntry(alias,
+                      new KeyStore.PasswordProtection(System.getenv("KEY_PASSWORD").toCharArray()));
+                  if (!(entry instanceof KeyStore.PrivateKeyEntry)) {
+                      throw new IllegalStateException("alias 不是私钥条目: " + alias);
+                  }
+                  System.out.println("keystore 校验通过：type=" + ks.getType() + " alias=" + alias);
+              }
+          }
+          JAVA
+
+          if ! KEYSTORE_PATH="$keystore" java /tmp/KeystoreProbe.java > probe.log 2>&1; then
+            echo '--- 校验输出 ---'
+            cat probe.log
+            header=$(head -c 4 "$keystore" | od -An -tx1 | tr -d ' \n')
+            echo "--- 文件头 4 字节: ${header:-<空文件>} ---"
+            case "$header" in
+              3082*|feedfeed)
+                echo "::error::keystore 文件本身合法，但 STORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD 中至少一项不匹配"
+                ;;
+              *)
+                echo "::error::KEYSTORE secret 解码后不是 keystore（应以 30 82 开头表示 PKCS12，或 fe ed fe ed 表示 JKS）"
+                echo '请重新生成该 secret：'
+                echo '  Linux: base64 -w 0 keystore.jks'
+                echo '  macOS: base64 -i keystore.jks | tr -d "\n"'
+                ;;
+            esac
+            exit 1
+          fi
+          cat probe.log
+          rm -f probe.log base64.err /tmp/KeystoreProbe.java
+
+          {
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'storePassword=%s\n' "$STORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } >> android/local.properties
 
       - name: Setup Android NDK
         if: matrix.platform == 'android'
@@ -148,12 +243,13 @@ jobs:
         with:
           go-version: ${{ matrix.compatible == true && '1.20.x' || '1.25.x' }}
           cache-dependency-path: core/go.sum
+          cache: ${{ matrix.platform != 'android' }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ contains(matrix.os, 'arm') && 'master' || 'stable' }}
-          cache: true
+          cache: ${{ matrix.platform != 'android' }}
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
           flutter-version: ${{ contains(matrix.os, 'arm') && '' || '3.44.9' }}
 
@@ -180,7 +276,7 @@ jobs:
           FILE="${MOD_CACHE}/github.com/metacubex/sing-tun@${SING_TUN_VERSION}/tun_windows.go"
           echo "Patching ${FILE}"
           chmod +w "${FILE}"
-      - name: Build Bettbox (Non-Windows)
+      - name: Build KitonyBox (Non-Windows)
         if: matrix.platform != 'windows'
         shell: bash
         env:
@@ -240,7 +336,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unsigned-core-${{ matrix.arch }}-${{ matrix.compatible }}
-          path: libclash/windows/BettboxCore.exe
+          path: libclash/windows/KitonyBoxCore.exe
           if-no-files-found: error
           retention-days: 1
 
@@ -262,7 +358,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $signedCoreHash = (Get-FileHash libclash/windows/BettboxCore.exe -Algorithm SHA256).Hash.ToLower()
+          $signedCoreHash = (Get-FileHash libclash/windows/KitonyBoxCore.exe -Algorithm SHA256).Hash.ToLower()
           Write-Host "Signed Core SHA256 (TOKEN for Helper): $signedCoreHash"
           dart setup.dart windows --arch ${{ matrix.arch }} --out helper --core-hash $signedCoreHash ${{ matrix.compatible == true && '--compatible' || '' }}
 
@@ -272,7 +368,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unsigned-helper-${{ matrix.arch }}-${{ matrix.compatible }}
-          path: libclash/windows/BettboxHelperService.exe
+          path: libclash/windows/KitonyBoxHelperService.exe
           if-no-files-found: error
           retention-days: 1
 
@@ -290,13 +386,13 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: 'libclash/windows'
 
-      - name: Build Bettbox (Windows)
+      - name: Build KitonyBox (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          $coreHash = (Get-FileHash libclash/windows/BettboxCore.exe -Algorithm SHA256).Hash.ToLower()
+          $coreHash = (Get-FileHash libclash/windows/KitonyBoxCore.exe -Algorithm SHA256).Hash.ToLower()
           Write-Host "Core SHA256: $coreHash"
           
           $desc = if ('${{ matrix.compatible }}' -eq 'true') { "${{ matrix.arch }}-compatible" } else { "${{ matrix.arch }}" }
@@ -314,17 +410,17 @@ jobs:
           
           flutter @flutterArgs
 
-      - name: Upload Unsigned Bettbox
+      - name: Upload Unsigned KitonyBox
         if: matrix.platform == 'windows' && env.SIGNPATH_API_TOKEN != ''
-        id: upload-bettbox
+        id: upload-kitonybox
         uses: actions/upload-artifact@v7
         with:
-          name: unsigned-bettbox-${{ matrix.arch }}-${{ matrix.compatible }}
-          path: build/windows/${{ matrix.arch == 'arm64' && 'arm64' || 'x64' }}/runner/Release/Bettbox.exe
+          name: unsigned-kitonybox-${{ matrix.arch }}-${{ matrix.compatible }}
+          path: build/windows/${{ matrix.arch == 'arm64' && 'arm64' || 'x64' }}/runner/Release/KitonyBox.exe
           if-no-files-found: error
           retention-days: 1
 
-      - name: Sign Bettbox (Windows)
+      - name: Sign KitonyBox (Windows)
         if: matrix.platform == 'windows' && env.SIGNPATH_API_TOKEN != ''
         uses: signpath/github-action-submit-signing-request@v2
         timeout-minutes: 60
@@ -334,7 +430,7 @@ jobs:
           organization-id: '0d3f8e8e-3f4d-4ac8-ab3f-d6c5c110ab0d'
           project-slug: 'Bettbox'
           signing-policy-slug: '${{ env.EXE_SIGNING_POLICY_SLUG }}'
-          github-artifact-id: '${{ steps.upload-bettbox.outputs.artifact-id }}'
+          github-artifact-id: '${{ steps.upload-kitonybox.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: 'build/windows/${{ matrix.arch == ''arm64'' && ''arm64'' || ''x64'' }}/runner/Release'
 
@@ -349,7 +445,7 @@ jobs:
         shell: pwsh
         run: |
           $desc = if ('${{ matrix.compatible }}' -eq 'true') { "${{ matrix.arch }}-compatible" } else { "${{ matrix.arch }}" }
-          $installer = (Resolve-Path "dist/Bettbox-*-windows-$desc-setup.exe").Path
+          $installer = (Resolve-Path "dist/KitonyBox-*-windows-$desc-setup.exe").Path
           echo "INSTALLER_PATH=$installer" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "INSTALLER_FILENAME=$(Split-Path -Leaf $installer)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -384,7 +480,7 @@ jobs:
           name: |
             unsigned-core-${{ matrix.arch }}-${{ matrix.compatible }}
             unsigned-helper-${{ matrix.arch }}-${{ matrix.compatible }}
-            unsigned-bettbox-${{ matrix.arch }}-${{ matrix.compatible }}
+            unsigned-kitonybox-${{ matrix.arch }}-${{ matrix.compatible }}
             unsigned-installer-${{ matrix.arch }}-${{ matrix.compatible }}
           failOnError: false
       
@@ -392,27 +488,27 @@ jobs:
         if: matrix.platform == 'linux' && matrix.compatible != true
         shell: bash
         run: |
-          echo "=== Verifying BettboxCore setuid in DEB package ==="
-          if ls dist/Bettbox-*.deb 1>/dev/null 2>&1; then
-            DEB_PERMS=$(dpkg-deb -c dist/Bettbox-*.deb | grep BettboxCore || true)
+          echo "=== Verifying KitonyBoxCore setuid in DEB package ==="
+          if ls dist/KitonyBox-*.deb 1>/dev/null 2>&1; then
+            DEB_PERMS=$(dpkg-deb -c dist/KitonyBox-*.deb | grep KitonyBoxCore || true)
             echo "$DEB_PERMS"
             if echo "$DEB_PERMS" | grep -q 'rws'; then
-              echo "OK: BettboxCore in DEB has setuid bit"
+              echo "OK: KitonyBoxCore in DEB has setuid bit"
             else
-              echo "WARNING: BettboxCore in DEB is missing setuid bit (will be set by postinst on install)"
-              POSTINST=$(dpkg-deb -e dist/Bettbox-*.deb /tmp/bettbox-deb-control && cat /tmp/bettbox-deb-control/postinst || true)
-              if ! echo "$POSTINST" | grep -q '/usr/share/Bettbox/BettboxCore'; then
-                echo "ERROR: postinst script does not set permissions on /usr/share/Bettbox/BettboxCore"
+              echo "WARNING: KitonyBoxCore in DEB is missing setuid bit (will be set by postinst on install)"
+              POSTINST=$(dpkg-deb -e dist/KitonyBox-*.deb /tmp/kitonybox-deb-control && cat /tmp/kitonybox-deb-control/postinst || true)
+              if ! echo "$POSTINST" | grep -q '/usr/share/KitonyBox/KitonyBoxCore'; then
+                echo "ERROR: postinst script does not set permissions on /usr/share/KitonyBox/KitonyBoxCore"
                 exit 1
               fi
             fi
           fi
-          echo "=== Verifying BettboxCore setuid in RPM package ==="
-          if ls dist/Bettbox-*.rpm 1>/dev/null 2>&1; then
-            RPM_PERMS=$(rpm -qplv dist/Bettbox-*.rpm | grep BettboxCore || true)
+          echo "=== Verifying KitonyBoxCore setuid in RPM package ==="
+          if ls dist/KitonyBox-*.rpm 1>/dev/null 2>&1; then
+            RPM_PERMS=$(rpm -qplv dist/KitonyBox-*.rpm | grep KitonyBoxCore || true)
             echo "$RPM_PERMS"
             if ! echo "$RPM_PERMS" | grep -q 'rws'; then
-              echo "ERROR: BettboxCore in RPM is missing setuid bit"
+              echo "ERROR: KitonyBoxCore in RPM is missing setuid bit"
               exit 1
             fi
           fi
@@ -420,7 +516,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Bettbox-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.compatible == true && '-compatible' || '' }}
+          name: KitonyBox-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.compatible == true && '-compatible' || '' }}
           path: ./dist
           compression-level: 9
           overwrite: true
@@ -439,7 +535,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: ./dist/
-          pattern: Bettbox-*
+          pattern: KitonyBox-*
           merge-multiple: true
 
       - name: Generate release.md

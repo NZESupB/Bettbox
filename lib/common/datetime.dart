@@ -1,4 +1,4 @@
-import 'package:bett_box/common/app_localizations.dart';
+import 'package:kitony_box/common/app_localizations.dart';
 
 extension DateTimeExtension on DateTime {
   bool get isBeforeNow {

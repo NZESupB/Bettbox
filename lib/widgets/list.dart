@@ -1,8 +1,8 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/open_container.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/open_container.dart';
 import 'package:flutter/material.dart';
 
 import 'card.dart';
@@ -657,10 +657,7 @@ class ContinuousListItem extends StatelessWidget {
             children: [
               if (hasTightHeight)
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: child,
-                  ),
+                  child: Align(alignment: Alignment.center, child: child),
                 )
               else
                 child,

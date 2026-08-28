@@ -2,16 +2,16 @@
   <a href="../README.md">简体中文</a> | <a href="README_en.md">English</a> | <strong>Русский</strong> | <a href="README_fa.md">فارسی</a> | <a href="README_ja.md">日本語</a> | <a href="README_ko.md">한국어</a>
 </h4>
 
-<h1 align="center">⚡ Bettbox</h1>
+<h1 align="center">⚡ KitonyBox</h1>
 <p align="center">
   <strong>Another Better Mihomo Client</strong>
 </p>
 
-**Bettbox — это мультиплатформенный клиент для отладки сети и маршрутизации трафика на базе правил, созданный на ядре Mihomo (Clash Meta) и переработанный из ранней версии FlClash.**
+**KitonyBox — это мультиплатформенный клиент для отладки сети и маршрутизации трафика на базе правил, созданный на ядре Mihomo (Clash Meta) и переработанный из ранней версии FlClash.**
 
-Следуя принципу «Better Experience» (Лучший опыт), Bettbox сохраняет отличный UI оригинала, глубоко оптимизируя детали интерфейса и логику функций. Цель: плавная работа в активном режиме и незаметное энергосбережение в фоновом — лёгкий и надёжный клиент Mihomo.
+Следуя принципу «Better Experience» (Лучший опыт), KitonyBox сохраняет отличный UI оригинала, глубоко оптимизируя детали интерфейса и логику функций. Цель: плавная работа в активном режиме и незаметное энергосбережение в фоновом — лёгкий и надёжный клиент Mihomo.
 
-Название Bettbox означает: Better Experience, Out of the box (Превосходный опыт из коробки).
+Название KitonyBox означает: Better Experience, Out of the box (Превосходный опыт из коробки).
 
 [![Latest Release](https://img.shields.io/github/v/release/appshubcc/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/appshubcc/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
 ---
@@ -21,7 +21,7 @@
 
 <div align="left">
 
-[![Telegram Group](https://img.shields.io/badge/Bettbox-Chat-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_chat) [![Telegram Channel](https://img.shields.io/badge/Bettbox-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_channel)
+[![Telegram Group](https://img.shields.io/badge/KitonyBox-Chat-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_chat) [![Telegram Channel](https://img.shields.io/badge/KitonyBox-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_channel)
 
 ---
 ## 🚀 Основные особенности
@@ -58,8 +58,8 @@
 * **HarmonyOS NEXT:** Совместимо при использовании с [[ZhuoYiTong]](https://harmonyos.cool/android-app)
 
 **Другие способы установки:**<br>
-**ArchLinux:** <code>yay -S bettbox-bin или paru -S bettbox-bin</code> (поддерживается [lyj404](https://github.com/lyj404/bettbox-aur))<br>
-**AMD64=v1:** <code>yay -S bettbox-compatible-bin или paru -S bettbox-compatible-bin</code> (поддерживается [VillagerTom](https://github.com/VillagerTom))
+**ArchLinux:** <code>yay -S kitonybox-bin или paru -S kitonybox-bin</code> (поддерживается [lyj404](https://github.com/lyj404/kitonybox-aur))<br>
+**AMD64=v1:** <code>yay -S kitonybox-compatible-bin или paru -S kitonybox-compatible-bin</code> (поддерживается [VillagerTom](https://github.com/VillagerTom))
 
 ---
 ## ❓ FAQ (Часто задаваемые вопросы)
@@ -76,16 +76,16 @@
    - Если проблема не решена, пожалуйста, создайте ISSUE для обратной связи.
 
 3. **Инструкция по установке на macOS**:
-   - Скачайте образ для вашей платформы (Intel / Apple Silicon) и откройте `Bettbox-macos-xx.dmg`.
-   - Перетащите значок Bettbox в папку `Applications` (Программы).
+   - Скачайте образ для вашей платформы (Intel / Apple Silicon) и откройте `KitonyBox-macos-xx.dmg`.
+   - Перетащите значок KitonyBox в папку `Applications` (Программы).
    - **Обход блокировок Gatekeeper при первом запуске** ([так как мы пока не приобретали сертификат разработчика Apple](https://support.apple.com/en-us/102445)):
-     - **Рекомендуемый**: откройте папку «Программы», **нажмите правой кнопкой мыши по значку Bettbox**, выберите **«Открыть»**, а затем снова **«Открыть»** в окне подтверждения.
-     - **Альтернативный**: если запуск заблокирован, перейдите в «Системные настройки» -> «Конфиденциальность и безопасность», найдите Bettbox и нажмите **«Подтвердить вход»**.
+     - **Рекомендуемый**: откройте папку «Программы», **нажмите правой кнопкой мыши по значку KitonyBox**, выберите **«Открыть»**, а затем снова **«Открыть»** в окне подтверждения.
+     - **Альтернативный**: если запуск заблокирован, перейдите в «Системные настройки» -> «Конфиденциальность и безопасность», найдите KitonyBox и нажмите **«Подтвердить вход»**.
    - При первом включении режима TUN введите пароль пользователя Mac для настройки сети.
    - **Если появляется сообщение «Приложение повреждено и его нельзя открыть. Вам следует переместить его в Корзину»**:
      - Это ложное срабатывание macOS Gatekeeper. Откройте Терминал и выполните:
        ```bash
-       xattr -d com.apple.quarantine /Applications/Bettbox.app
+       xattr -d com.apple.quarantine /Applications/KitonyBox.app
        ```
 
 4. **Не удается импортировать ссылку на подписку**:
@@ -111,8 +111,8 @@
 
 Адаптация пользовательских скриптов UI:
 
-* Начиная с v1.18.8, Bettbox поддерживает внешние скрипты оверрайда для UI. Например, для конфигураций AIsouler **[Репозиторий скриптов](https://github.com/AIsouler/MyClash)** достаточно добавить строку в начало скрипта:
-* <code>const Compatible_With_Bettbox = { ruleOptionsEnable: true };</code>
+* Начиная с v1.18.8, KitonyBox поддерживает внешние скрипты оверрайда для UI. Например, для конфигураций AIsouler **[Репозиторий скриптов](https://github.com/AIsouler/MyClash)** достаточно добавить строку в начало скрипта:
+* <code>const Compatible_With_KitonyBox = { ruleOptionsEnable: true };</code>
 
 ---
 

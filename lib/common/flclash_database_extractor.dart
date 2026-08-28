@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// FlClash 数据库提取工具
@@ -57,7 +57,8 @@ class FlClashDatabaseExtractor {
 
     final autoUpdateRaw = row['auto_update'];
     final autoUpdate = autoUpdateRaw == 1 || autoUpdateRaw == true;
-    final autoUpdateDurationMillis = (row['auto_update_duration_millis'] as int?) ?? 0;
+    final autoUpdateDurationMillis =
+        (row['auto_update_duration_millis'] as int?) ?? 0;
     final autoUpdateDuration = Duration(milliseconds: autoUpdateDurationMillis);
 
     final subscriptionInfo = _parseSubscriptionInfo(row['subscription_info']);
@@ -90,7 +91,9 @@ class FlClashDatabaseExtractor {
   static SubscriptionInfo? _parseSubscriptionInfo(dynamic jsonStr) {
     if (jsonStr == null || jsonStr is! String || jsonStr.isEmpty) return null;
     try {
-      return SubscriptionInfo.fromJson(json.decode(jsonStr) as Map<String, dynamic>);
+      return SubscriptionInfo.fromJson(
+        json.decode(jsonStr) as Map<String, dynamic>,
+      );
     } catch (e) {
       commonPrint.log('Failed to parse subscription_info: $e');
       return null;
@@ -118,6 +121,8 @@ class FlClashDatabaseExtractor {
   }
 
   static OverrideRuleType _parseOverwriteType(String? typeStr) {
-    return typeStr == 'script' ? OverrideRuleType.override : OverrideRuleType.added;
+    return typeStr == 'script'
+        ? OverrideRuleType.override
+        : OverrideRuleType.added;
   }
 }

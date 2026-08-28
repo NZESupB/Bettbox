@@ -5,11 +5,11 @@ import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/plugins/service.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/plugins/service.dart';
+import 'package:kitony_box/state.dart';
 
 import 'generated/clash_ffi.dart';
 import 'interface.dart';
@@ -55,10 +55,14 @@ class ClashLib extends ClashHandlerInterface with AndroidClashInterface {
 
   Future<void> _waitForIpc() async {
     for (var attempt = 0; attempt < 3; attempt++) {
-      final connected = await _canSendCompleter.future
-          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      final connected = await _canSendCompleter.future.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => false,
+      );
       if (connected) return;
-      commonPrint.log('ClashLib: IPC attempt ${attempt + 1}/3 failed, retrying...');
+      commonPrint.log(
+        'ClashLib: IPC attempt ${attempt + 1}/3 failed, retrying...',
+      );
       _canSendCompleter = Completer();
       await service?.reconnectIpc();
     }
@@ -239,14 +243,17 @@ class ClashLibHandler {
     return DateTime.fromMillisecondsSinceEpoch(int.parse(runTimeString));
   }
 
-  Future<Map<String, dynamic>> getConfig(String id, {String? ageSecretKey}) async {
+  Future<Map<String, dynamic>> getConfig(
+    String id, {
+    String? ageSecretKey,
+  }) async {
     final path = await appPath.getProfilePath(id);
-    final params = {
-      'path': path,
-      'age-secret-key': ageSecretKey ?? '',
-    };
+    final params = {'path': path, 'age-secret-key': ageSecretKey ?? ''};
     return using((arena) {
-      final pathChar = json.encode(params).toNativeUtf8(allocator: arena).cast<Char>();
+      final pathChar = json
+          .encode(params)
+          .toNativeUtf8(allocator: arena)
+          .cast<Char>();
       final configRaw = clashFFI.getConfig(pathChar);
       if (configRaw == nullptr) return <String, dynamic>{};
       try {

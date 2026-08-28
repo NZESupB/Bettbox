@@ -1,9 +1,9 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/models/common.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/dialog.dart';
-import 'package:bett_box/widgets/null_status.dart';
-import 'package:bett_box/widgets/text.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/models/common.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/dialog.dart';
+import 'package:kitony_box/widgets/null_status.dart';
+import 'package:kitony_box/widgets/text.dart';
 import 'package:flutter/material.dart';
 
 import 'card.dart';

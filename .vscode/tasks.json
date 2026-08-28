@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "bettbox: ensure windows dev core",
+      "label": "kitonybox: ensure windows dev core",
       "type": "shell",
       "command": "dart",
       "args": [
@@ -22,7 +22,7 @@
       "group": "build"
     },
     {
-      "label": "bettbox: ensure macos dev core",
+      "label": "kitonybox: ensure macos dev core",
       "type": "shell",
       "command": "dart",
       "args": [
@@ -42,7 +42,7 @@
       "group": "build"
     },
     {
-      "label": "bettbox: ensure linux dev core",
+      "label": "kitonybox: ensure linux dev core",
       "type": "shell",
       "command": "dart",
       "args": [
@@ -62,7 +62,7 @@
       "group": "build"
     },
     {
-      "label": "bettbox: ensure android x64 core",
+      "label": "kitonybox: ensure android x64 core",
       "type": "shell",
       "command": "dart",
       "args": [
@@ -81,7 +81,7 @@
       "group": "build"
     },
     {
-      "label": "bettbox: ensure android arm64 core",
+      "label": "kitonybox: ensure android arm64 core",
       "type": "shell",
       "command": "dart",
       "args": [

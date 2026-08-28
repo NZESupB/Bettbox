@@ -3,14 +3,14 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/selector.dart';
-import 'package:bett_box/plugins/app.dart';
-import 'package:bett_box/providers/config.dart';
-import 'package:bett_box/providers/state.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/selector.dart';
+import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/providers/config.dart';
+import 'package:kitony_box/providers/state.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -485,9 +485,7 @@ class _DarkIconItem extends ConsumerWidget {
     );
     return ListItem.switchItem(
       leading: Icon(
-        isWindowsOrLinux
-            ? Icons.light_mode_outlined
-            : Icons.dark_mode_outlined,
+        isWindowsOrLinux ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
       ),
       horizontalTitleGap: 12,
       title: Text(

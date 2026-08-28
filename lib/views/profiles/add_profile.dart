@@ -1,8 +1,8 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/pages/scan.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/widgets/widgets.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/pages/scan.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'edit_profile.dart';
@@ -16,12 +16,12 @@ class AddProfileView extends StatelessWidget {
     globalState.appController.addProfileFormFile();
   }
 
-  Future<void> _handleAddProfileFormURL(String url, {String? ageSecretKey}) async {
+  Future<void> _handleAddProfileFormURL(
+    String url, {
+    String? ageSecretKey,
+  }) async {
     final editKey = GlobalKey<EditProfileViewState>();
-    final profile = Profile.normal(
-      url: url,
-      ageSecretKey: ageSecretKey,
-    );
+    final profile = Profile.normal(url: url, ageSecretKey: ageSecretKey);
     showExtend(
       context,
       builder: (_, type) {

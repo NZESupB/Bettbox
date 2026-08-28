@@ -2,10 +2,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:path/path.dart' as p;
 
-enum TransportType {
-  unixSocket,
-  tcp,
-}
+enum TransportType { unixSocket, tcp }
 
 class PlatformChecker {
   static bool? _udsSupport;
@@ -22,7 +19,7 @@ class PlatformChecker {
       final testDir = Directory.systemTemp.path;
       final testPath = p.join(
         testDir,
-        'bettbox_test_${DateTime.now().millisecondsSinceEpoch}.sock',
+        'kitonybox_test_${DateTime.now().millisecondsSinceEpoch}.sock',
       );
       final address = InternetAddress(testPath, type: InternetAddressType.unix);
       final server = await ServerSocket.bind(address, 0);

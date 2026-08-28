@@ -1,7 +1,7 @@
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/state.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/state.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -55,14 +55,18 @@ final filteredLogsProvider = Provider<List<Log>>((ref) {
 
   return logs.where((item) {
     if (query.isNotEmpty) {
-      final matchesQuery = item.payload.toLowerCase().contains(query) ||
+      final matchesQuery =
+          item.payload.toLowerCase().contains(query) ||
           item.logLevel.name.toLowerCase().contains(query) ||
           item.dateTime.toLowerCase().contains(query);
       if (!matchesQuery) return false;
     }
     if (keywords.isNotEmpty) {
-      final itemStr = '${item.payload} ${item.logLevel.name} ${item.dateTime}'.toLowerCase();
-      final matchesKeywords = keywords.every((keyword) => itemStr.contains(keyword.toLowerCase()));
+      final itemStr = '${item.payload} ${item.logLevel.name} ${item.dateTime}'
+          .toLowerCase();
+      final matchesKeywords = keywords.every(
+        (keyword) => itemStr.contains(keyword.toLowerCase()),
+      );
       if (!matchesKeywords) return false;
     }
     return true;
@@ -108,7 +112,8 @@ final filteredRequestsProvider = Provider<List<TrackerInfo>>((ref) {
       final destinationIPText = item.metadata.destinationIP.toLowerCase();
       final processText = item.metadata.process.toLowerCase();
       final chainsText = item.chains.join('').toLowerCase();
-      final matchesQuery = networkText.contains(query) ||
+      final matchesQuery =
+          networkText.contains(query) ||
           hostText.contains(query) ||
           destinationIPText.contains(query) ||
           processText.contains(query) ||
@@ -456,7 +461,9 @@ class IsSmartStopped extends _$IsSmartStopped {
 final connectionsProvider = StateProvider<List<TrackerInfo>>((ref) => []);
 final connectionsSearchProvider = StateProvider<String>((ref) => '');
 final connectionsKeywordsProvider = StateProvider<List<String>>((ref) => []);
-final connectionsSortProvider = StateProvider<ConnectionsSortType>((ref) => ConnectionsSortType.creationTime);
+final connectionsSortProvider = StateProvider<ConnectionsSortType>(
+  (ref) => ConnectionsSortType.creationTime,
+);
 
 final filteredConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
   final connections = ref.watch(connectionsProvider);
@@ -470,7 +477,8 @@ final filteredConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
       final destinationIPText = item.metadata.destinationIP.toLowerCase();
       final processText = item.metadata.process.toLowerCase();
       final chainsText = item.chains.join('').toLowerCase();
-      final matchesQuery = networkText.contains(query) ||
+      final matchesQuery =
+          networkText.contains(query) ||
           hostText.contains(query) ||
           destinationIPText.contains(query) ||
           processText.contains(query) ||

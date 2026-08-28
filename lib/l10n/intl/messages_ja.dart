@@ -266,7 +266,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteTip": m2,
     "deleteTunnel": MessageLookupByLibrary.simpleMessage("転送削除"),
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Bettboxは柔軟で強力なMihomo(Clash.Meta)カーネルを搭載した、快適性を追求したプロキシクライアントです。（FlClashベース）",
+      "KitonyBoxは柔軟で強力なMihomo(Clash.Meta)カーネルを搭載した、快適性を追求したプロキシクライアントです。（FlClashベース）",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("宛先アドレス"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage("宛先GeoIP"),
@@ -990,6 +990,53 @@ class MessageLookup extends MessageLookupByLibrary {
     "whitelistMode": MessageLookupByLibrary.simpleMessage("ホワイトリストモード"),
     "writeToSystem": MessageLookupByLibrary.simpleMessage("システムへ適用"),
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage("管理者権限が必要です"),
+    "xboardAccount": MessageLookupByLibrary.simpleMessage("パネルアカウント"),
+    "xboardAccountDesc": MessageLookupByLibrary.simpleMessage(
+      "パネルにログインしてサブスクリプションを自動同期",
+    ),
+    "xboardEmail": MessageLookupByLibrary.simpleMessage("メール"),
+    "xboardEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "メールの形式が正しくありません",
+    ),
+    "xboardEmailNull": MessageLookupByLibrary.simpleMessage("メールを入力してください"),
+    "xboardExpireAt": MessageLookupByLibrary.simpleMessage("有効期限"),
+    "xboardLastSync": MessageLookupByLibrary.simpleMessage("最終同期"),
+    "xboardLinkedProfile": MessageLookupByLibrary.simpleMessage("連携サブスクリプション"),
+    "xboardLogin": MessageLookupByLibrary.simpleMessage("ログイン"),
+    "xboardLoginFailed": MessageLookupByLibrary.simpleMessage("ログインに失敗しました"),
+    "xboardLoginHint": MessageLookupByLibrary.simpleMessage(
+      "パネルのメールとパスワードでログインします。サブスクリプションは自動的にインポートされます。",
+    ),
+    "xboardLogout": MessageLookupByLibrary.simpleMessage("ログアウト"),
+    "xboardLogoutConfirm": MessageLookupByLibrary.simpleMessage("ログアウトしますか？"),
+    "xboardNeverExpires": MessageLookupByLibrary.simpleMessage("無期限"),
+    "xboardNotLoggedIn": MessageLookupByLibrary.simpleMessage("未ログイン"),
+    "xboardPersistFailed": MessageLookupByLibrary.simpleMessage(
+      "アカウント情報のローカル保存に失敗しました",
+    ),
+    "xboardPassword": MessageLookupByLibrary.simpleMessage("パスワード"),
+    "xboardPasswordNull": MessageLookupByLibrary.simpleMessage(
+      "パスワードを入力してください",
+    ),
+    "xboardPlan": MessageLookupByLibrary.simpleMessage("プラン"),
+    "xboardRefreshInfo": MessageLookupByLibrary.simpleMessage("情報を更新"),
+    "xboardRelogin": MessageLookupByLibrary.simpleMessage("再ログイン"),
+    "xboardSessionExpired": MessageLookupByLibrary.simpleMessage(
+      "セッションが期限切れです。再ログインしてください",
+    ),
+    "xboardSignedIn": MessageLookupByLibrary.simpleMessage("ログイン済み"),
+    "xboardStatus": MessageLookupByLibrary.simpleMessage("ステータス"),
+    "xboardSyncSubscription": MessageLookupByLibrary.simpleMessage(
+      "サブスクリプションを同期",
+    ),
+    "xboardSyncSubscriptionFailed": MessageLookupByLibrary.simpleMessage(
+      "サブスクリプションの同期に失敗しました。後で再試行してください",
+    ),
+    "xboardSyncSubscriptionSuccess": MessageLookupByLibrary.simpleMessage(
+      "サブスクリプションを同期しました",
+    ),
+    "xboardTrafficRemaining": MessageLookupByLibrary.simpleMessage("残りトラフィック"),
+    "xboardTrafficUsage": MessageLookupByLibrary.simpleMessage("トラフィック使用量"),
     "years": m14,
   };
 }

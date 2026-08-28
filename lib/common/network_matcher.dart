@@ -73,7 +73,9 @@ class NetworkMatcher {
     final trimmed = rule.trim();
     if (trimmed.isEmpty) return false;
 
-    return trimmed.contains('/') ? parseCIDR(trimmed) != null : parseIPv4(trimmed) != null;
+    return trimmed.contains('/')
+        ? parseCIDR(trimmed) != null
+        : parseIPv4(trimmed) != null;
   }
 
   static bool isValidRules(String rules) {

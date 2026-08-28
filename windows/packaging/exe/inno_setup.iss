@@ -88,9 +88,11 @@ var
 begin
   PowerShellScript := 
     '$ErrorActionPreference = ''SilentlyContinue'';' + #13#10 +
-    'Write-Host "Cleaning old Wintun/Bettbox/LiClash network adapters...";' + #13#10 +
+    'Write-Host "Cleaning old Wintun/KitonyBox/Bettbox/LiClash network adapters...";' + #13#10 +
     '$adapters = Get-NetAdapter | Where-Object {' + #13#10 +
-    '$_.InterfaceDescription -like "*Bettbox*" -or' + #13#10 +
+    '$_.InterfaceDescription -like "*KitonyBox*" -or' + #13#10 +
+    '  $_.Name -like "*KitonyBox*" -or' + #13#10 +
+    '  $_.InterfaceDescription -like "*Bettbox*" -or' + #13#10 +
     '  $_.Name -like "*Bettbox*"' + #13#10 +
     '};' + #13#10 +
     'if ($adapters) {' + #13#10 +
@@ -167,9 +169,11 @@ var
   RegistryKeys: TArrayOfString;
   i: Integer;
 begin
-  SetArrayLength(RegistryKeys, 2);
-  RegistryKeys[0] := 'Software\com.appshub.bettbox';
-  RegistryKeys[1] := 'Software\com.appshub\Bettbox';
+  SetArrayLength(RegistryKeys, 4);
+  RegistryKeys[0] := 'Software\com.appshub.kitonybox';
+  RegistryKeys[1] := 'Software\com.appshub\KitonyBox';
+  RegistryKeys[2] := 'Software\com.appshub.bettbox';
+  RegistryKeys[3] := 'Software\com.appshub\Bettbox';
   
   for i := 0 to GetArrayLength(RegistryKeys)-1 do
   begin
@@ -185,9 +189,11 @@ var
 begin
   AppDataPath := ExpandConstant('{userappdata}');
   
-  SetArrayLength(UserDataPaths, 2);
-  UserDataPaths[0] := AppDataPath + '\com.appshub.bettbox';
-  UserDataPaths[1] := AppDataPath + '\com.appshub\Bettbox';
+  SetArrayLength(UserDataPaths, 4);
+  UserDataPaths[0] := AppDataPath + '\com.appshub.kitonybox';
+  UserDataPaths[1] := AppDataPath + '\com.appshub\KitonyBox';
+  UserDataPaths[2] := AppDataPath + '\com.appshub.bettbox';
+  UserDataPaths[3] := AppDataPath + '\com.appshub\Bettbox';
   
   for i := 0 to GetArrayLength(UserDataPaths)-1 do
   begin

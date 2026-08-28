@@ -278,7 +278,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteTip": m2,
     "deleteTunnel": MessageLookupByLibrary.simpleMessage("포워딩 삭제"),
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Bettbox는 강력하고 유연한 Mihomo(Clash.Meta) 코어를 기반으로 개발된 사용자 친화적 프록시 클라이언트입니다. (FlClash 기반)",
+      "KitonyBox는 강력하고 유연한 Mihomo(Clash.Meta) 코어를 기반으로 개발된 사용자 친화적 프록시 클라이언트입니다. (FlClash 기반)",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("목적지 주소"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage("목적지 GeoIP"),
@@ -1002,6 +1002,49 @@ class MessageLookup extends MessageLookupByLibrary {
     "whitelistMode": MessageLookupByLibrary.simpleMessage("화이트리스트 모드"),
     "writeToSystem": MessageLookupByLibrary.simpleMessage("시스템 적용"),
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage("관리자 권한이 필요합니다"),
+    "xboardAccount": MessageLookupByLibrary.simpleMessage("패널 계정"),
+    "xboardAccountDesc": MessageLookupByLibrary.simpleMessage(
+      "패널 계정으로 로그인하고 구독 자동 동기화",
+    ),
+    "xboardEmail": MessageLookupByLibrary.simpleMessage("이메일"),
+    "xboardEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "이메일 형식이 올바르지 않습니다",
+    ),
+    "xboardEmailNull": MessageLookupByLibrary.simpleMessage("이메일을 입력하세요"),
+    "xboardExpireAt": MessageLookupByLibrary.simpleMessage("만료 시간"),
+    "xboardLastSync": MessageLookupByLibrary.simpleMessage("마지막 동기화"),
+    "xboardLinkedProfile": MessageLookupByLibrary.simpleMessage("연결된 구독"),
+    "xboardLogin": MessageLookupByLibrary.simpleMessage("로그인"),
+    "xboardLoginFailed": MessageLookupByLibrary.simpleMessage("로그인 실패"),
+    "xboardLoginHint": MessageLookupByLibrary.simpleMessage(
+      "패널 이메일과 비밀번호로 로그인하면 구독이 자동으로 가져와집니다.",
+    ),
+    "xboardLogout": MessageLookupByLibrary.simpleMessage("로그아웃"),
+    "xboardLogoutConfirm": MessageLookupByLibrary.simpleMessage("로그아웃하시겠습니까?"),
+    "xboardNeverExpires": MessageLookupByLibrary.simpleMessage("무기한"),
+    "xboardNotLoggedIn": MessageLookupByLibrary.simpleMessage("로그인 안 됨"),
+    "xboardPersistFailed": MessageLookupByLibrary.simpleMessage(
+      "계정 데이터를 로컬에 저장하지 못했습니다",
+    ),
+    "xboardPassword": MessageLookupByLibrary.simpleMessage("비밀번호"),
+    "xboardPasswordNull": MessageLookupByLibrary.simpleMessage("비밀번호를 입력하세요"),
+    "xboardPlan": MessageLookupByLibrary.simpleMessage("요금제"),
+    "xboardRefreshInfo": MessageLookupByLibrary.simpleMessage("정보 새로고침"),
+    "xboardRelogin": MessageLookupByLibrary.simpleMessage("다시 로그인"),
+    "xboardSessionExpired": MessageLookupByLibrary.simpleMessage(
+      "세션이 만료되었습니다. 다시 로그인하세요",
+    ),
+    "xboardSignedIn": MessageLookupByLibrary.simpleMessage("로그인됨"),
+    "xboardStatus": MessageLookupByLibrary.simpleMessage("상태"),
+    "xboardSyncSubscription": MessageLookupByLibrary.simpleMessage("구독 동기화"),
+    "xboardSyncSubscriptionFailed": MessageLookupByLibrary.simpleMessage(
+      "구독 동기화에 실패했습니다. 나중에 다시 시도하세요",
+    ),
+    "xboardSyncSubscriptionSuccess": MessageLookupByLibrary.simpleMessage(
+      "구독이 동기화되었습니다",
+    ),
+    "xboardTrafficRemaining": MessageLookupByLibrary.simpleMessage("남은 트래픽"),
+    "xboardTrafficUsage": MessageLookupByLibrary.simpleMessage("트래픽 사용량"),
     "years": m14,
   };
 }

@@ -335,7 +335,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteTip": m2,
     "deleteTunnel": MessageLookupByLibrary.simpleMessage("حذف هدایت"),
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Bettbox یک کلاینت پروکسی بر پایه هسته قدرتمند Mihomo (Clash.Meta) است. (برگرفته از FlClash)",
+      "KitonyBox یک کلاینت پروکسی بر پایه هسته قدرتمند Mihomo (Clash.Meta) است. (برگرفته از FlClash)",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("آدرس مقصد"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage(
@@ -1269,6 +1269,63 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "نیازمند دسترسی مدیریت (Admin)",
     ),
+    "xboardAccount": MessageLookupByLibrary.simpleMessage("حساب پنل"),
+    "xboardAccountDesc": MessageLookupByLibrary.simpleMessage(
+      "ورود به حساب پنل و همگام‌سازی خودکار اشتراک",
+    ),
+    "xboardEmail": MessageLookupByLibrary.simpleMessage("ایمیل"),
+    "xboardEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "قالب ایمیل نامعتبر است",
+    ),
+    "xboardEmailNull": MessageLookupByLibrary.simpleMessage(
+      "لطفاً ایمیل را وارد کنید",
+    ),
+    "xboardExpireAt": MessageLookupByLibrary.simpleMessage("زمان انقضا"),
+    "xboardLastSync": MessageLookupByLibrary.simpleMessage("آخرین همگام‌سازی"),
+    "xboardLinkedProfile": MessageLookupByLibrary.simpleMessage("اشتراک مرتبط"),
+    "xboardLogin": MessageLookupByLibrary.simpleMessage("ورود"),
+    "xboardLoginFailed": MessageLookupByLibrary.simpleMessage(
+      "ورود ناموفق بود",
+    ),
+    "xboardLoginHint": MessageLookupByLibrary.simpleMessage(
+      "با ایمیل و رمز عبور پنل وارد شوید. اشتراک به‌طور خودکار وارد می‌شود.",
+    ),
+    "xboardLogout": MessageLookupByLibrary.simpleMessage("خروج"),
+    "xboardLogoutConfirm": MessageLookupByLibrary.simpleMessage(
+      "خروج از حساب؟",
+    ),
+    "xboardNeverExpires": MessageLookupByLibrary.simpleMessage("بدون انقضا"),
+    "xboardNotLoggedIn": MessageLookupByLibrary.simpleMessage("وارد نشده‌اید"),
+    "xboardPersistFailed": MessageLookupByLibrary.simpleMessage(
+      "ذخیره‌سازی محلی اطلاعات حساب ناموفق بود",
+    ),
+    "xboardPassword": MessageLookupByLibrary.simpleMessage("رمز عبور"),
+    "xboardPasswordNull": MessageLookupByLibrary.simpleMessage(
+      "لطفاً رمز عبور را وارد کنید",
+    ),
+    "xboardPlan": MessageLookupByLibrary.simpleMessage("پلن"),
+    "xboardRefreshInfo": MessageLookupByLibrary.simpleMessage(
+      "به‌روزرسانی اطلاعات",
+    ),
+    "xboardRelogin": MessageLookupByLibrary.simpleMessage("ورود مجدد"),
+    "xboardSessionExpired": MessageLookupByLibrary.simpleMessage(
+      "نشست منقضی شده است، لطفاً دوباره وارد شوید",
+    ),
+    "xboardSignedIn": MessageLookupByLibrary.simpleMessage("وارد شده‌اید"),
+    "xboardStatus": MessageLookupByLibrary.simpleMessage("وضعیت"),
+    "xboardSyncSubscription": MessageLookupByLibrary.simpleMessage(
+      "همگام‌سازی اشتراک",
+    ),
+    "xboardSyncSubscriptionFailed": MessageLookupByLibrary.simpleMessage(
+      "همگام‌سازی اشتراک ناموفق بود، بعداً دوباره تلاش کنید",
+    ),
+    "xboardSyncSubscriptionSuccess": MessageLookupByLibrary.simpleMessage(
+      "اشتراک همگام‌سازی شد",
+    ),
+    "xboardTrafficRemaining": MessageLookupByLibrary.simpleMessage(
+      "ترافیک باقی‌مانده",
+    ),
+    "xboardTrafficUsage": MessageLookupByLibrary.simpleMessage("مصرف ترافیک"),
     "years": m14,
   };
 }

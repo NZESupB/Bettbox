@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:bett_box/clash/interface.dart';
-import 'package:bett_box/common/common.dart';
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/helper/helper.dart';
-import 'package:bett_box/models/core.dart';
-import 'package:bett_box/state.dart';
-import 'package:bett_box/utils/frame_codec.dart';
-import 'package:bett_box/utils/platform_check.dart';
+import 'package:kitony_box/clash/interface.dart';
+import 'package:kitony_box/common/common.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/helper/helper.dart';
+import 'package:kitony_box/models/core.dart';
+import 'package:kitony_box/state.dart';
+import 'package:kitony_box/utils/frame_codec.dart';
+import 'package:kitony_box/utils/platform_check.dart';
 import 'package:path/path.dart' as p;
 
 class ClashService extends ClashHandlerInterface {
@@ -46,7 +46,7 @@ class ClashService extends ClashHandlerInterface {
     if (_transportType == TransportType.unixSocket) {
       final random = Random().nextInt(10000);
       final tempDir = Directory.systemTemp.path;
-      _socketPath = p.join(tempDir, 'Bettbox_$random.sock');
+      _socketPath = p.join(tempDir, 'KitonyBox_$random.sock');
       commonPrint.log('Using Unix Domain Socket: $_socketPath');
     } else {
       _tcpPort = PlatformChecker.getRandomPort();
@@ -97,6 +97,9 @@ class ClashService extends ClashHandlerInterface {
         }
       },
       (error, stack) {
+        if (!serverCompleter.isCompleted) {
+          serverCompleter.completeError(error, stack);
+        }
         if (_isDestroying || globalState.isExiting) return;
         commonPrint.log(error.toString());
         if (error is SocketException &&
@@ -176,7 +179,8 @@ class ClashService extends ClashHandlerInterface {
         if (started) {
           await _waitForCoreReady();
           isStarting = false;
-          if (system.isWindows && globalState.config.appSetting.enableHighPriority) {
+          if (system.isWindows &&
+              globalState.config.appSetting.enableHighPriority) {
             unawaited(
               helperClient
                   .setProcessPriority(
@@ -311,7 +315,12 @@ class ClashService extends ClashHandlerInterface {
 
   @override
   Future<bool> preload() async {
-    await serverCompleter.future;
+    await serverCompleter.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => throw TimeoutException(
+        'Timed out waiting for Clash service server to start',
+      ),
+    );
     return true;
   }
 }

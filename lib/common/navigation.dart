@@ -1,7 +1,7 @@
-import 'package:bett_box/enum/enum.dart';
-import 'package:bett_box/models/models.dart';
-import 'package:bett_box/providers/providers.dart';
-import 'package:bett_box/views/views.dart';
+import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/models.dart';
+import 'package:kitony_box/providers/providers.dart';
+import 'package:kitony_box/views/views.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -36,6 +36,12 @@ class Navigation {
         label: PageLabel.profiles,
         builder: (_) =>
             ProfilesView(key: const GlobalObjectKey(PageLabel.profiles)),
+      ),
+      NavigationItem(
+        icon: Icon(Icons.account_circle),
+        label: PageLabel.account,
+        builder: (_) =>
+            AccountPage(key: const GlobalObjectKey(PageLabel.account)),
       ),
       NavigationItem(
         icon: Icon(Icons.view_timeline),
