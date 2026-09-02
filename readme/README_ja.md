@@ -13,7 +13,7 @@
 
 KitonyBox：Better Experience, Out of the box（優れた体験を、すぐに使える）。
 
-[![Latest Release](https://img.shields.io/github/v/release/appshubcc/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/appshubcc/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/NZESupB/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/NZESupB/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
 ---
 ### ✈️ Telegram コミュニティ
 
@@ -46,7 +46,7 @@ KitonyBox：Better Experience, Out of the box（優れた体験を、すぐに�
 
 ## 🛠️ インストールとダウンロード
 
-ご利用のプラットフォームおよびシステムに適した最新のインストールパッケージを **[[Releases]](https://github.com/appshubcc/Bettbox/releases)** ページからダウンロードしてください。
+ご利用のプラットフォームおよびシステムに適した最新のインストールパッケージを **[[Releases]](https://github.com/NZESupB/Bettbox/releases)** ページからダウンロードしてください。
 
 
 * **全デスクトッププラットフォーム**: 
@@ -139,7 +139,7 @@ Windows の例：
 
 **[FlClash GUI](https://github.com/chen08209/FlClash)** Clearance **[Mihomo Core](https://github.com/MetaCubeX/mihomo)**
 
-すべての [コントリビューター](https://github.com/appshubcc/Bettbox/graphs/contributors) および関連オープンソースプロジェクトに感謝いたします：
+すべての [コントリビューター](https://github.com/NZESupB/Bettbox/graphs/contributors) および関連オープンソースプロジェクトに感謝いたします：
 
 [CMFA](https://github.com/MetaCubeX/ClashMetaForAndroid), [Sparkle](https://github.com/xishang0128/sparkle), [SFA](https://github.com/SagerNet/sing-box-for-android), [HUSI](https://github.com/xchacha20-poly1305/husi), [V2rayN](https://github.com/2dust/v2rayN)
 

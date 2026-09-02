@@ -13,7 +13,7 @@ Guided by the principle of "Better Experience", KitonyBox inherits the original 
 
 KitonyBox stands for: Better Experience, Out of the box.
 
-[![Latest Release](https://img.shields.io/github/v/release/appshubcc/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/appshubcc/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/NZESupB/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/NZESupB/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
 ---
 ### ✈️ Telegram Community
 
@@ -59,7 +59,7 @@ KitonyBox stands for: Better Experience, Out of the box.
 ---
 ## 🛠️ Installation & Downloads
 
-Please visit the **[[Releases]](https://github.com/appshubcc/Bettbox/releases)** page to download the latest installer for your platform.
+Please visit the **[[Releases]](https://github.com/NZESupB/Bettbox/releases)** page to download the latest installer for your platform.
 
 
 * **Cross-Platform Desktop**: 
@@ -152,7 +152,7 @@ Custom Script UI Adaptation:
 
 **[FlClash GUI](https://github.com/chen08209/FlClash)** 〢 **[Mihomo Core](https://github.com/MetaCubeX/mihomo)**
 
-Special thanks to all [Contributors](https://github.com/appshubcc/Bettbox/graphs/contributors) and referenced open-source projects:
+Special thanks to all [Contributors](https://github.com/NZESupB/Bettbox/graphs/contributors) and referenced open-source projects:
 
 [CMFA](https://github.com/MetaCubeX/ClashMetaForAndroid), [Sparkle](https://github.com/xishang0128/sparkle), [SFA](https://github.com/SagerNet/sing-box-for-android), [HUSI](https://github.com/xchacha20-poly1305/husi), [V2rayN](https://github.com/2dust/v2rayN)
 

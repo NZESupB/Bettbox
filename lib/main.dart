@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:kitony_box/plugins/app.dart';
+import 'package:kitony_box/plugins/clipboard_ext.dart';
 import 'package:kitony_box/plugins/tile.dart';
 import 'package:kitony_box/plugins/vpn.dart';
 import 'package:kitony_box/state.dart';
@@ -95,6 +96,9 @@ Future<void> _runApp() async {
   await android?.init();
 
   await window?.init();
+  if (system.isWindows) {
+    clipboardExt.init();
+  }
   HttpOverrides.global = KitonyBoxHttpOverrides();
   runApp(ProviderScope(child: const Application()));
 }
@@ -122,11 +126,15 @@ Future<void> _service(List<String> flags) async {
           final isSmartStopped = await vpn?.isSmartStopped() ?? false;
           final candidateIps =
               await vpn?.getLocalIpAddresses() ?? const <String>[];
-          if (candidateIps.isEmpty) return;
+          final candidateGateways =
+              await vpn?.getLocalGateways() ?? const <String>[];
+          if (candidateIps.isEmpty && candidateGateways.isEmpty) return;
 
-          final shouldStop = candidateIps.any(
-            (ip) => NetworkMatcher.matchAny(ip, networks),
-          );
+          final shouldStop =
+              candidateIps.any((ip) => NetworkMatcher.matchAny(ip, networks)) ||
+              candidateGateways.any(
+                (gw) => NetworkMatcher.matchAnyGateway(gw, networks),
+              );
 
           if (shouldStop && !isSmartStopped) {
             final isRunning = await vpn?.getStatus() ?? false;

@@ -114,8 +114,8 @@ class _ToolViewState extends ConsumerState<ToolsView> {
                       color: context.colorScheme.outlineVariant.withValues(
                         alpha:
                             context.colorScheme.brightness == Brightness.light
-                            ? 0.3
-                            : 0.2,
+                            ? 0.6
+                            : 0.45,
                       ),
                       indent: 16,
                       endIndent: 16,
@@ -383,17 +383,14 @@ class _ToolViewState extends ConsumerState<ToolsView> {
         onTap: (context, _) =>
             _pushPage(context, appLocalizations.theme, const ThemeView()),
       ),
-      _SearchItem(
-        title: (system.isWindows || system.isLinux)
-            ? appLocalizations.lightIcon
-            : appLocalizations.darkIcon,
-        subtitle: (system.isWindows || system.isLinux)
-            ? appLocalizations.lightIconDesc
-            : appLocalizations.darkIconDesc,
-        category: themeCategory,
-        onTap: (context, _) =>
-            _pushPage(context, appLocalizations.theme, const ThemeView()),
-      ),
+      if (system.isAndroid)
+        _SearchItem(
+          title: appLocalizations.darkIcon,
+          subtitle: appLocalizations.darkIconDesc,
+          category: themeCategory,
+          onTap: (context, _) =>
+              _pushPage(context, appLocalizations.theme, const ThemeView()),
+        ),
       if (system.isWindows)
         _SearchItem(
           title: appLocalizations.trayIconInvert,
@@ -1416,7 +1413,7 @@ class _ToolViewState extends ConsumerState<ToolsView> {
         },
         padding: EdgeInsets.only(
           bottom:
-              20 +
+              (globalState.isAndroidTV ? 80.0 : 20.0) +
               (isMobileView ? getFloatingBottomBarReserveHeight(context) : 0),
           top: 8,
         ),

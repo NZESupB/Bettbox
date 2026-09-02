@@ -36,9 +36,7 @@ class Vpn {
           break;
         case 'screenStateChanged':
           final isOn = call.arguments as bool;
-          globalState.appState = globalState.appState.copyWith(
-            isScreenOn: isOn,
-          );
+          globalState.isScreenOn = isOn;
           for (final listener in _listeners) {
             listener.onScreenStateChanged(isOn);
           }
@@ -69,6 +67,11 @@ class Vpn {
     return await methodChannel.invokeListMethod<String>(
           'getLocalIpAddresses',
         ) ??
+        const [];
+  }
+
+  Future<List<String>> getLocalGateways() async {
+    return await methodChannel.invokeListMethod<String>('getLocalGateways') ??
         const [];
   }
 

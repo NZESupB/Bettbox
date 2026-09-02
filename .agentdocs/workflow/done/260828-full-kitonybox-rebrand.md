@@ -15,9 +15,11 @@
 
 ## 必须保持不变的外部资源
 
-- **GitHub 仓库名仍是 `appshubcc/Bettbox`**（用户确认未在 GitHub 上重命名）。`repository` 常量、更新检查 URL 前缀、about 页链接、README 徽章 URL、issue 模板链接中的 `appshubcc/Bettbox` 一律不得替换。
+- ~~**GitHub 仓库名仍是 `appshubcc/Bettbox`**（用户确认未在 GitHub 上重命名）。`repository` 常量、更新检查 URL 前缀、about 页链接、README 徽章 URL、issue 模板链接中的 `appshubcc/Bettbox` 一律不得替换。~~
+  - **2026-09-02 本条已被用户整条撤销**：`repository` 常量、about 页链接、7 个 README、2 个 issue 模板、release 模板下载直链全部改为 `NZESupB/Bettbox`。仍保留 appshubcc 的只有上游规则仓库 `appshubcc/bett-rules`、Windows `publisher`/`publisher_url`、Linux 打包者邮箱。详见 `260902-merge-upstream-v1.19.0.md` 的「仓库归属收敛」。
 - CI 签名服务的 `project-slug: 'Bettbox'` 属外部服务标识，用户未要求改动，保持。
 - Telegram 实际跳转链接 `appshub_chat` / `appshub_channel` 不含品牌名，无需改动。
+  - 2026-09-02 修正：release 模板中的 Telegram 区块已整体移除（上游社区，与本 fork 无关）。
 
 ## 命名映射（替换顺序：先长后短）
 

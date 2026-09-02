@@ -13,7 +13,7 @@
 
 Название KitonyBox означает: Better Experience, Out of the box (Превосходный опыт из коробки).
 
-[![Latest Release](https://img.shields.io/github/v/release/appshubcc/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/appshubcc/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/NZESupB/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/NZESupB/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
 ---
 ### ✈️ Сообщество в Telegram
 
@@ -46,7 +46,7 @@
 
 ## 🛠️ Установка и загрузка
 
-Перейдите на страницу **[[Releases]](https://github.com/appshubcc/Bettbox/releases)**, чтобы скачать актуальный установочный пакет для вашей платформы и системы.
+Перейдите на страницу **[[Releases]](https://github.com/NZESupB/Bettbox/releases)**, чтобы скачать актуальный установочный пакет для вашей платформы и системы.
 
 
 * **Все ПК платформы**: 
@@ -139,7 +139,7 @@
 
 **[FlClash GUI](https://github.com/chen08209/FlClash)** 〢 **[Mihomo Core](https://github.com/MetaCubeX/mihomo)**
 
-Отдельное спасибо всем [Участникам](https://github.com/appshubcc/Bettbox/graphs/contributors) и разработчикам смежных проектов:
+Отдельное спасибо всем [Участникам](https://github.com/NZESupB/Bettbox/graphs/contributors) и разработчикам смежных проектов:
 
 [CMFA](https://github.com/MetaCubeX/ClashMetaForAndroid), [Sparkle](https://github.com/xishang0128/sparkle), [SFA](https://github.com/SagerNet/sing-box-for-android), [HUSI](https://github.com/xchacha20-poly1305/husi), [V2rayN](https://github.com/2dust/v2rayN)
 

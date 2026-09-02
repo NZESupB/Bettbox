@@ -720,6 +720,50 @@ class _AddRuleDialogState extends State<AddRuleDialog> {
                             return null;
                           },
                           builder: (field) {
+                            if (globalState.isAndroidTV) {
+                              return OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final selected = await globalState
+                                      .showCommonDialog<String>(
+                                        child: OptionsDialog<String>(
+                                          title: appLocalizations.ruleProviders,
+                                          options: _ruleProviderItems
+                                              .map((e) => e.value)
+                                              .toList(),
+                                          textBuilder: (item) => item,
+                                          value: _ruleProviderController.text,
+                                        ),
+                                      );
+                                  if (selected != null) {
+                                    setState(() {
+                                      _ruleProviderController.text = selected;
+                                    });
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _ruleProviderController.text.isEmpty
+                                          ? appLocalizations.ruleProviders
+                                          : _ruleProviderController.text,
+                                      style: context.textTheme.bodyLarge,
+                                    ),
+                                    const Icon(Icons.arrow_drop_down),
+                                  ],
+                                ),
+                              );
+                            }
                             return DropdownMenu<String>(
                               expandedInsets: EdgeInsets.zero,
                               controller: _ruleProviderController,
@@ -733,6 +777,8 @@ class _AddRuleDialogState extends State<AddRuleDialog> {
                       : TextFormField(
                           controller: _contentController,
                           enabled: _ruleAction != RuleAction.MATCH,
+                          maxLines: 1,
+                          textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             labelText: appLocalizations.content,
@@ -761,6 +807,50 @@ class _AddRuleDialogState extends State<AddRuleDialog> {
                             return null;
                           },
                           builder: (filed) {
+                            if (globalState.isAndroidTV) {
+                              return OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final selected = await globalState
+                                      .showCommonDialog<String>(
+                                        child: OptionsDialog<String>(
+                                          title: appLocalizations.subRule,
+                                          options: _subRuleItems
+                                              .map((e) => e.value)
+                                              .toList(),
+                                          textBuilder: (item) => item,
+                                          value: _subRuleController.text,
+                                        ),
+                                      );
+                                  if (selected != null) {
+                                    setState(() {
+                                      _subRuleController.text = selected;
+                                    });
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _subRuleController.text.isEmpty
+                                          ? appLocalizations.subRule
+                                          : _subRuleController.text,
+                                      style: context.textTheme.bodyLarge,
+                                    ),
+                                    const Icon(Icons.arrow_drop_down),
+                                  ],
+                                ),
+                              );
+                            }
                             return DropdownMenu<String>(
                               width: 200,
                               enableFilter: false,
@@ -782,6 +872,50 @@ class _AddRuleDialogState extends State<AddRuleDialog> {
                             return null;
                           },
                           builder: (filed) {
+                            if (globalState.isAndroidTV) {
+                              return OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final selected = await globalState
+                                      .showCommonDialog<String>(
+                                        child: OptionsDialog<String>(
+                                          title: appLocalizations.ruleTarget,
+                                          options: _targetItems
+                                              .map((e) => e.value)
+                                              .toList(),
+                                          textBuilder: (item) => item,
+                                          value: _ruleTargetController.text,
+                                        ),
+                                      );
+                                  if (selected != null) {
+                                    setState(() {
+                                      _ruleTargetController.text = selected;
+                                    });
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _ruleTargetController.text.isEmpty
+                                          ? appLocalizations.ruleTarget
+                                          : _ruleTargetController.text,
+                                      style: context.textTheme.bodyLarge,
+                                    ),
+                                    const Icon(Icons.arrow_drop_down),
+                                  ],
+                                ),
+                              );
+                            }
                             return DropdownMenu<String>(
                               controller: _ruleTargetController,
                               label: Text(appLocalizations.ruleTarget),
