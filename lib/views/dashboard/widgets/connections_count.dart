@@ -5,7 +5,7 @@ import 'package:kitony_box/common/common.dart';
 import 'package:kitony_box/state.dart';
 import 'package:kitony_box/views/connection/connections.dart';
 import 'package:kitony_box/widgets/widgets.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class ConnectionsCount extends StatefulWidget {
   const ConnectionsCount({super.key});
@@ -15,7 +15,8 @@ class ConnectionsCount extends StatefulWidget {
 }
 
 class _ConnectionsCountState extends State<ConnectionsCount> {
-  int _count = 0;
+  static int? _lastCount;
+  int _count = _lastCount ?? 0;
   late final VoidCallback _tickListener;
   Timer? _initTimer;
   bool _isUpdating = false;
@@ -42,6 +43,7 @@ class _ConnectionsCountState extends State<ConnectionsCount> {
 
     try {
       final connections = await clashCore.getConnections();
+      _lastCount = connections.length;
       if (mounted) {
         setState(() {
           _count = connections.length;
@@ -57,9 +59,12 @@ class _ConnectionsCountState extends State<ConnectionsCount> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: getWidgetHeight(1),
+      height: getWidgetHeight(context, 1),
       child: CommonCard(
-        info: Info(iconData: Icons.ballot, label: appLocalizations.connection),
+        info: Info(
+          iconData: Icons.cable_rounded,
+          label: appLocalizations.connection,
+        ),
         onPressed: () {
           showExtend(
             context,

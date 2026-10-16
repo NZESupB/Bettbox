@@ -1,10 +1,15 @@
 package com.appshub.kitonybox
 
+import android.content.ComponentName
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
+import android.service.quicksettings.TileService
 import com.appshub.kitonybox.plugins.AppPlugin
 import com.appshub.kitonybox.plugins.ServicePlugin
 import com.appshub.kitonybox.plugins.TilePlugin
 import com.appshub.kitonybox.plugins.VpnPlugin
+import com.appshub.kitonybox.services.KitonyBoxTileService
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
@@ -31,8 +36,11 @@ enum class RunState {
 object GlobalState {
     val runLock = ReentrantLock()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     const val NOTIFICATION_CHANNEL = "KitonyBox"
+    const val NOTIFICATION_CHANNEL_HIGH = "KitonyBox_High"
+    const val NOTIFICATION_CHANNEL_SUSPENDED = "KitonyBox_Suspended"
     const val NOTIFICATION_ID = 1
 
     private const val TOGGLE_DEBOUNCE_MS = 1000L
@@ -62,17 +70,61 @@ object GlobalState {
 
     @Volatile
     var currentProfileName: String = ""
+        set(value) {
+            if (field != value) {
+                field = value
+                requestTileUpdate()
+            }
+        }
 
     @Volatile
     var isSpeedNotificationEnabled: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                requestTileUpdate()
+            }
+        }
+
+    @Volatile
+    var isNotificationHighPriority: Boolean = false
 
     fun updateRunState(newState: RunState) {
+        if (currentRunState == newState) return
+
         if (newState != RunState.PENDING) {
             pendingTimeoutJob?.cancel()
             pendingTimeoutJob = null
         }
         currentRunState = newState
         _runState.value = newState
+        requestTileUpdate()
+    }
+
+    private val tileRetryRunnable = Runnable {
+        KitonyBoxTileService.refreshActive()
+        requestListeningStateSafely()
+    }
+
+    fun requestTileUpdate() {
+        mainHandler.post {
+            KitonyBoxTileService.refreshActive()
+            requestListeningStateSafely()
+            mainHandler.removeCallbacks(tileRetryRunnable)
+            mainHandler.postDelayed(tileRetryRunnable, 1000L)
+        }
+    }
+
+    private fun requestListeningStateSafely() {
+        runCatching {
+            val context = KitonyBoxApplication.getAppContext()
+            TileService.requestListeningState(
+                context,
+                ComponentName(context, KitonyBoxTileService::class.java)
+            )
+        }.onFailure {
+            android.util.Log.w("GlobalState", "requestTileUpdate failed: ${it.message}")
+        }
     }
 
     private fun startPendingTimeout() {
@@ -140,8 +192,10 @@ object GlobalState {
 
     fun handleToggle() {
         if (!acquireToggleSlot()) return
-        if (!handleStart(skipDebounce = true)) {
-            handleStop(skipDebounce = true)
+        when (currentRunState) {
+            RunState.START -> handleStop(skipDebounce = true)
+            RunState.STOP -> handleStart(skipDebounce = true)
+            RunState.PENDING -> Unit
         }
     }
 
@@ -164,7 +218,12 @@ object GlobalState {
         updateRunState(RunState.PENDING)
         startPendingTimeout()
         runLock.withLock {
-            getCurrentTilePlugin()?.handleStop()
+            val tilePlugin = getCurrentTilePlugin()
+            if (tilePlugin != null) {
+                tilePlugin.handleStop()
+            } else {
+                VpnPlugin.handleStop(force = true)
+            }
         }
     }
 

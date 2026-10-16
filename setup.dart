@@ -103,9 +103,9 @@ class Build {
 
   static String get helperName => '${identityName}HelperService';
 
-  static String get libName => 'libclash';
+  static String get libName => 'libmeta';
 
-  static String get outDir => join(current, libName);
+  static String get outDir => join(current, 'libclash');
 
   static String get _coreDir => join(current, 'core');
 
@@ -210,10 +210,10 @@ class Build {
       if (item.arch != null) {
         env['GOARCH'] = item.arch!.name;
       }
-      if (item.arch == Arch.amd64 &&
-          (item.target == Target.windows ||
-              item.target == Target.linux ||
-              item.target == Target.macos)) {
+      if (item.arch == Arch.amd64 && item.target == Target.macos) {
+        env['GOAMD64'] = 'v1';
+      } else if (item.arch == Arch.amd64 &&
+          (item.target == Target.windows || item.target == Target.linux)) {
         env['GOAMD64'] = compatible ? 'v1' : 'v3';
       }
       if (isLib) {
@@ -272,7 +272,38 @@ class Build {
       target.name,
       '${Build.helperName}${target.executableExtensionName}',
     );
-    await File(outPath).copy(targetPath);
+    await _replaceFile(File(outPath), targetPath);
+  }
+
+  static Future<void> _replaceFile(File source, String destinationPath) async {
+    final staleFile = File('$destinationPath.old');
+    if (staleFile.existsSync()) {
+      try {
+        staleFile.deleteSync();
+      } catch (_) {}
+    }
+
+    try {
+      await source.copy(destinationPath);
+    } on PathExistsException catch (e) {
+      if (!Platform.isWindows || !File(destinationPath).existsSync()) {
+        rethrow;
+      }
+      print(
+        'Cannot replace $destinationPath (${e.osError?.message ?? e.message}), '
+        'renaming the running binary aside and retrying.',
+      );
+      await File(destinationPath).rename(staleFile.path);
+      await source.copy(destinationPath);
+    }
+
+    File(destinationPath).setLastModifiedSync(DateTime.now());
+
+    if (staleFile.existsSync()) {
+      try {
+        staleFile.deleteSync();
+      } catch (_) {}
+    }
   }
 
   static List<String> getExecutable(String command) {
@@ -321,6 +352,126 @@ class Build {
       print('Failed to copy file: $e');
     }
   }
+
+  static const List<AssetDownloadItem> assetDownloadItems = [
+    AssetDownloadItem(
+      url:
+          'https://github.com/appshubcc/bett-rules/releases/download/latest/geosite.dat',
+      fileName: 'GeoSite.dat',
+    ),
+    AssetDownloadItem(
+      url:
+          'https://github.com/appshubcc/bett-rules/releases/download/latest/geoip.metadb',
+      fileName: 'geoip.metadb',
+    ),
+    AssetDownloadItem(
+      url:
+          'https://github.com/appshubcc/bett-rules/releases/download/latest/GeoLite2-ASN-lite.mmdb',
+      fileName: 'ASN.mmdb',
+    ),
+    AssetDownloadItem(
+      url:
+          'https://github.com/Zephyruso/zashboard/releases/download/v3.29.1/dist-no-fonts.zip',
+      fileName: 'zash.zip',
+    ),
+  ];
+
+  static Future<void> ensureAssets({bool force = false}) async {
+    final dataDir = Directory(join(current, 'assets', 'data'));
+    if (!dataDir.existsSync()) {
+      dataDir.createSync(recursive: true);
+    }
+
+    final now = DateTime.now();
+    final maxAge = const Duration(hours: 48);
+
+    for (final item in assetDownloadItems) {
+      final targetFile = File(join(dataDir.path, item.fileName));
+      var shouldDownload = force;
+
+      if (!shouldDownload) {
+        if (!targetFile.existsSync() || targetFile.lengthSync() == 0) {
+          shouldDownload = true;
+        } else {
+          final lastModified = targetFile.lastModifiedSync();
+          final age = now.difference(lastModified);
+          if (age >= maxAge) {
+            shouldDownload = true;
+          }
+        }
+      }
+
+      if (shouldDownload) {
+        print('Downloading ${item.fileName} from ${item.url} ...');
+        await _downloadAsset(item.url, targetFile.path);
+        print('Downloaded ${item.fileName} successfully.');
+      } else {
+        final ageHours = now.difference(targetFile.lastModifiedSync()).inHours;
+        print('${item.fileName} is up to date (${ageHours}h < 48h).');
+      }
+    }
+  }
+
+  static Future<void> _downloadAsset(
+    String url,
+    String destinationPath, {
+    int maxRetries = 3,
+  }) async {
+    final tempPath = '$destinationPath.tmp';
+    final tempFile = File(tempPath);
+    if (tempFile.existsSync()) {
+      tempFile.deleteSync();
+    }
+
+    for (var attempt = 1; attempt <= maxRetries; attempt++) {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 30);
+      try {
+        final request = await client.getUrl(Uri.parse(url));
+        request.followRedirects = true;
+        request.maxRedirects = 10;
+        final response = await request.close();
+        if (response.statusCode != HttpStatus.ok) {
+          throw HttpException(
+            'Failed with status ${response.statusCode}',
+            uri: Uri.parse(url),
+          );
+        }
+        final sink = tempFile.openWrite();
+        await response.pipe(sink);
+        await sink.flush();
+        await sink.close();
+
+        final destinationFile = File(destinationPath);
+        if (destinationFile.existsSync()) {
+          destinationFile.deleteSync();
+        }
+        tempFile.renameSync(destinationPath);
+        File(destinationPath).setLastModifiedSync(DateTime.now());
+        return;
+      } catch (e) {
+        if (tempFile.existsSync()) {
+          try {
+            tempFile.deleteSync();
+          } catch (_) {}
+        }
+        if (attempt == maxRetries) {
+          rethrow;
+        }
+        print('Download failed ($e), retrying ($attempt/$maxRetries)...');
+        await Future.delayed(Duration(seconds: attempt * 2));
+      } finally {
+        client.close();
+      }
+    }
+  }
+}
+
+class AssetDownloadItem {
+  final String url;
+  final String fileName;
+
+  const AssetDownloadItem({required this.url, required this.fileName});
 }
 
 class BuildCommand extends Command {
@@ -419,46 +570,12 @@ class BuildCommand extends Command {
     final coreFile = File('libclash/linux/KitonyBoxCore');
     if (!coreFile.existsSync()) return;
     try {
-      await Process.run('chmod', ['+sx', coreFile.path]);
+      await Process.run('chmod', ['0755', coreFile.path]);
     } catch (_) {}
   }
 
   Future<void> _getMacosDependencies() async {
     await Build.exec(Build.getExecutable('npm install -g appdmg'));
-  }
-
-  Future<void> _setMacOSImpeller(bool enable) async {
-    final infoPlistPath = 'macos/Runner/Info.plist';
-    final file = File(infoPlistPath);
-
-    if (!await file.exists()) {
-      print('Warning: Info.plist not found at $infoPlistPath');
-      return;
-    }
-
-    var content = await file.readAsString();
-
-    content = content.replaceAll(
-      RegExp(r'\s*<key>FLTDisableImpeller</key>\s*<(?:true|false)/>'),
-      '',
-    );
-    content = content.replaceAll(
-      RegExp(r'\s*<key>FLTEnableImpeller</key>\s*<(?:true|false)/>'),
-      '',
-    );
-
-    if (!enable) {
-      const impellerEntry = '\t<key>FLTEnableImpeller</key>\n\t<false/>\n';
-      content = content.replaceFirst(
-        '</dict>\n</plist>',
-        '$impellerEntry</dict>\n</plist>',
-      );
-    }
-
-    await file.writeAsString(content);
-    print(
-      'macOS ${enable ? "default" : "compatible"} build: Impeller ${enable ? "enabled" : "disabled"}',
-    );
   }
 
   Future<void> _buildDistributor({
@@ -467,7 +584,6 @@ class BuildCommand extends Command {
     String args = '',
     required String env,
     required String suffix,
-    bool compatible = false,
   }) async {
     final sentryDsn = Platform.environment['SENTRY_DSN'] ?? '';
     final sentryArg = sentryDsn.isNotEmpty
@@ -484,18 +600,12 @@ class BuildCommand extends Command {
 
     final appDevArg = Build.isDev ? ' --build-dart-define=APP_DEV=true' : '';
 
-    final environment = Map<String, String>.from(Platform.environment);
-    if (compatible) {
-      environment['KITONYBOX_COMPATIBLE_BUILD'] = '1';
-    }
-
     await Build.getDistributor();
     await Build.exec(
       name: name,
       Build.getExecutable(
         'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose$args$sentryArg$suffixArg$ipinfoArg --build-dart-define=APP_ENV=$env$appDevArg',
       ),
-      environment: environment,
     );
   }
 
@@ -560,17 +670,24 @@ class BuildCommand extends Command {
   }
 
   DateTime _windowsSourcesLastModified() {
+    final sources = <FileSystemEntity>[File(join(current, 'setup.dart'))];
+
     final helperDir = Directory(Build._servicesDir);
-    if (!helperDir.existsSync()) {
-      return DateTime.fromMillisecondsSinceEpoch(0);
+    if (helperDir.existsSync()) {
+      sources.addAll(
+        helperDir.listSync(recursive: true).where((entity) {
+          return entity is File &&
+              !isWithin(join(Build._servicesDir, 'target'), entity.path);
+        }),
+      );
     }
-    return _latestModified([
-      File(join(current, 'setup.dart')),
-      ...helperDir.listSync(recursive: true).where((entity) {
-        return entity is File &&
-            !isWithin(join(Build._servicesDir, 'target'), entity.path);
-      }),
-    ]);
+
+    final coreDir = Directory(Build._coreDir);
+    if (coreDir.existsSync()) {
+      sources.addAll(coreDir.listSync(recursive: true).whereType<File>());
+    }
+
+    return _latestModified(sources);
   }
 
   bool _outputsAreFresh(Arch? arch) {
@@ -592,12 +709,35 @@ class BuildCommand extends Command {
 
   @override
   Future<void> run() async {
-    final mode = target == Target.android ? Mode.lib : Mode.core;
-    final String out = argResults?['out'] ?? (target.same ? 'app' : 'core');
-    final env = argResults?['env'] ?? 'pre';
-    Build.isDev = argResults?['dev'] ?? false;
+    await execute(
+      archName: argResults?['arch'],
+      out: argResults?['out'],
+      env: argResults?['env'] ?? 'pre',
+      dev: argResults?['dev'] ?? false,
+      ensure: argResults?['ensure'] ?? false,
+      compatible: argResults?['compatible'] ?? false,
+      coreHash: argResults?['core-hash'] as String?,
+    );
+  }
 
-    String? archName = argResults?['arch'];
+  Future<void> execute({
+    String? archName,
+    String? out,
+    String env = 'pre',
+    bool dev = false,
+    bool ensure = false,
+    bool compatible = false,
+    String? coreHash,
+  }) async {
+    if (compatible && target != Target.windows && target != Target.linux) {
+      throw '--compatible is only supported for windows and linux';
+    }
+    final mode = target == Target.android ? Mode.lib : Mode.core;
+    final String actualOut = out ?? (target.same ? 'app' : 'core');
+    Build.isDev = dev;
+
+    await Build.ensureAssets();
+
     if (archName == 'auto') {
       if (target == Target.android) {
         throw '--arch auto is not supported for android; choose the device ABI explicitly';
@@ -620,10 +760,7 @@ class BuildCommand extends Command {
       throw 'Invalid arch parameter';
     }
 
-    final bool compatible = argResults?['compatible'] ?? false;
-    final bool ensure = argResults?['ensure'] ?? false;
-
-    if (ensure && out != 'app') {
+    if (ensure && actualOut != 'app') {
       if (_outputsAreFresh(arch)) {
         print('${target.name} output already exists');
         return;
@@ -637,15 +774,14 @@ class BuildCommand extends Command {
       compatible: compatible,
     );
 
-    if (out == 'core-only') {
+    if (actualOut == 'core-only') {
       return;
     }
 
-    if (out == 'helper') {
+    if (actualOut == 'helper') {
       if (target != Target.windows) {
         throw '--out helper is only supported for windows';
       }
-      final coreHash = argResults?['core-hash'] as String?;
       if (coreHash == null || coreHash.isEmpty) {
         throw '--core-hash is required when --out=helper';
       }
@@ -653,7 +789,7 @@ class BuildCommand extends Command {
       return;
     }
 
-    if (out != 'app') {
+    if (actualOut != 'app') {
       if (target == Target.windows) {
         final token = await Build.calcSha256(corePaths.first);
         await Build.buildHelper(target, token);
@@ -698,7 +834,6 @@ class BuildCommand extends Command {
           args: ' --description $desc --build-dart-define=CORE_SHA256=$token',
           env: env,
           suffix: appAssetSuffix,
-          compatible: compatible,
         );
         return;
       case Target.linux:
@@ -720,7 +855,6 @@ class BuildCommand extends Command {
             args: ' --description $desc --build-target-platform $defaultTarget',
             env: env,
             suffix: currentSuffix,
-            compatible: compatible,
           );
         }
         return;
@@ -746,12 +880,10 @@ class BuildCommand extends Command {
           args: buildArgs,
           env: env,
           suffix: appAssetSuffix,
-          compatible: compatible,
         );
         return;
       case Target.macos:
         await _getMacosDependencies();
-        await _setMacOSImpeller(!compatible);
         await Build.exec(
           Build.getExecutable('rm -rf Pods Podfile.lock'),
           workingDirectory: 'macos',
@@ -761,24 +893,207 @@ class BuildCommand extends Command {
           Build.getExecutable('pod install --repo-update'),
           workingDirectory: 'macos',
         );
-        _buildDistributor(
-          target: target,
-          targets: 'dmg',
-          args: ' --description $desc',
-          env: env,
-          suffix: appAssetSuffix,
-          compatible: compatible,
-        );
+        final infoPlist = File('macos/Runner/Info.plist');
+        final infoPlistContent = await infoPlist.readAsString();
+        if (arch == Arch.amd64) {
+          await infoPlist.writeAsString(
+            infoPlistContent.replaceFirst(
+              '</dict>\n</plist>',
+              '\t<key>FLTEnableImpeller</key>\n\t<false/>\n</dict>\n</plist>',
+            ),
+          );
+        }
+        try {
+          await _buildDistributor(
+            target: target,
+            targets: 'dmg',
+            args: ' --description $desc',
+            env: env,
+            suffix: appAssetSuffix,
+          );
+        } finally {
+          await infoPlist.writeAsString(infoPlistContent);
+        }
         return;
     }
   }
 }
 
+class AutoBuildCommand extends Command {
+  AutoBuildCommand() {
+    argParser.addOption(
+      'device-id',
+      help:
+          'Target Flutter device ID (e.g. from \${command:flutter.getSelectedDeviceId})',
+    );
+    argParser.addOption(
+      'arch',
+      help: 'Target architecture (default: auto detect based on device)',
+    );
+    argParser.addOption(
+      'out',
+      valueHelp: ['app', 'core', 'core-only', 'helper'].join(','),
+      defaultsTo: 'core',
+      help: 'Build output type',
+    );
+    argParser.addOption(
+      'core-hash',
+      help: 'SHA256 hash of the core binary when --out=helper',
+    );
+    argParser.addOption(
+      'env',
+      valueHelp: ['pre', 'stable'].join(','),
+      help: 'Build env',
+    );
+    argParser.addFlag(
+      'compatible',
+      help: 'Build with GOAMD64=v2 for broader compatibility on amd64',
+    );
+    argParser.addFlag('dev', help: 'Build debug/dev variant');
+    argParser.addFlag(
+      'ensure',
+      help: 'Skip build if output artifact already exists',
+    );
+  }
+
+  @override
+  String get description => 'Automatically detect target device and build core';
+
+  @override
+  String get name => 'auto';
+
+  @override
+  Future<void> run() async {
+    final optDeviceId = argResults?['device-id']?.toString().trim() ?? '';
+    final rawDeviceId = optDeviceId.startsWith('-') ? '' : optDeviceId;
+    final String? explicitArch = argResults?['arch'];
+
+    Target? target;
+    String? archName = explicitArch;
+
+    if (rawDeviceId == 'windows') {
+      target = Target.windows;
+      archName ??= 'auto';
+    } else if (rawDeviceId == 'macos') {
+      target = Target.macos;
+      archName ??= 'auto';
+    } else if (rawDeviceId == 'linux') {
+      target = Target.linux;
+      archName ??= 'auto';
+    } else if (rawDeviceId == 'chrome' ||
+        rawDeviceId == 'edge' ||
+        rawDeviceId == 'web-server') {
+      print(
+        'Web device "$rawDeviceId" does not require core binary. Skipping.',
+      );
+      return;
+    } else if (rawDeviceId.isEmpty) {
+      if (Platform.isWindows) {
+        target = Target.windows;
+      } else if (Platform.isMacOS) {
+        target = Target.macos;
+      } else if (Platform.isLinux) {
+        target = Target.linux;
+      } else {
+        throw 'No device specified and unable to determine host platform.';
+      }
+      archName ??= 'auto';
+    } else {
+      final res = await Process.run('flutter', [
+        'devices',
+        '--machine',
+      ], runInShell: true);
+      if (res.exitCode != 0) {
+        throw 'Failed to execute "flutter devices --machine": ${res.stderr}';
+      }
+      final jsonList = jsonDecode(res.stdout.toString()) as List<dynamic>;
+      final device = jsonList.cast<Map<String, dynamic>?>().firstWhere(
+        (d) => d?['id'] == rawDeviceId,
+        orElse: () => null,
+      );
+
+      if (device == null) {
+        throw 'Device "$rawDeviceId" not found in flutter devices list.';
+      }
+
+      final targetPlatform = (device['targetPlatform'] as String? ?? '')
+          .toLowerCase();
+      if (targetPlatform.startsWith('android')) {
+        target = Target.android;
+        if (archName == null) {
+          if (targetPlatform.contains('arm64')) {
+            archName = 'arm64';
+          } else if (targetPlatform.contains('x64') ||
+              targetPlatform.contains('x86_64')) {
+            archName = 'amd64';
+          } else if (targetPlatform.contains('arm')) {
+            archName = 'arm';
+          } else {
+            throw 'Unsupported android platform architecture: $targetPlatform';
+          }
+        }
+      } else if (targetPlatform.startsWith('darwin') ||
+          targetPlatform.startsWith('macos')) {
+        target = Target.macos;
+        archName ??= 'auto';
+      } else if (targetPlatform.startsWith('windows')) {
+        target = Target.windows;
+        archName ??= 'auto';
+      } else if (targetPlatform.startsWith('linux')) {
+        target = Target.linux;
+        archName ??= 'auto';
+      } else if (targetPlatform.startsWith('web')) {
+        print(
+          'Web target platform "$targetPlatform" does not require core binary. Skipping.',
+        );
+        return;
+      } else {
+        throw 'Unknown or unsupported targetPlatform: $targetPlatform';
+      }
+    }
+
+    final cmd = BuildCommand(target: target);
+    await cmd.execute(
+      archName: archName,
+      out: argResults?['out'] ?? 'core',
+      env: argResults?['env'] ?? 'pre',
+      dev: argResults?['dev'] ?? false,
+      ensure: argResults?['ensure'] ?? false,
+      compatible: argResults?['compatible'] ?? false,
+      coreHash: argResults?['core-hash'] as String?,
+    );
+  }
+}
+
+class AssetsCommand extends Command {
+  AssetsCommand() {
+    argParser.addFlag(
+      'force',
+      abbr: 'f',
+      help: 'Force download assets even if within 48 hours',
+    );
+  }
+
+  @override
+  String get description => 'Download or update assets if older than 48 hours';
+
+  @override
+  String get name => 'assets';
+
+  @override
+  Future<void> run() async {
+    final force = argResults?['force'] as bool? ?? false;
+    await Build.ensureAssets(force: force);
+  }
+}
+
 Future<void> main(Iterable<String> args) async {
   final runner = CommandRunner('setup', 'build Application');
+  runner.addCommand(AutoBuildCommand());
+  runner.addCommand(AssetsCommand());
   runner.addCommand(BuildCommand(target: Target.android));
   runner.addCommand(BuildCommand(target: Target.linux));
   runner.addCommand(BuildCommand(target: Target.windows));
   runner.addCommand(BuildCommand(target: Target.macos));
-  runner.run(args);
+  await runner.run(args);
 }

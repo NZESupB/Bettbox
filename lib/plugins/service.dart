@@ -85,6 +85,9 @@ class Service {
         const [];
   }
 
+  Future<String?> getCurrentDns() =>
+      methodChannel.invokeMethod<String>('getCurrentDns');
+
   Future<bool?> setQuickResponse(bool enabled) async {
     return await methodChannel.invokeMethod<bool>('setQuickResponse', {
       'enabled': enabled,
@@ -112,6 +115,13 @@ class Service {
 
   Future<void> restoreNotification() async {
     await methodChannel.invokeMethod<void>('restoreNotification');
+  }
+
+  Future<bool?> setHighPriorityNotification(bool enabled) async {
+    return await methodChannel.invokeMethod<bool>(
+      'setHighPriorityNotification',
+      {'enabled': enabled},
+    );
   }
 
   Future<bool?> reconnectIpc() =>

@@ -6,7 +6,7 @@ import 'package:kitony_box/state.dart';
 import 'package:kitony_box/widgets/card.dart';
 import 'package:kitony_box/widgets/dialog.dart';
 import 'package:kitony_box/widgets/list.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

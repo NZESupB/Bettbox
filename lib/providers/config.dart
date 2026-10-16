@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:kitony_box/common/common.dart';
 import 'package:kitony_box/models/models.dart';
 import 'package:kitony_box/state.dart';
@@ -323,7 +325,7 @@ class ScriptState extends _$ScriptState with AutoDisposeNotifierMixin {
     final list = List<Script>.from(state.scripts);
     final index = list.indexWhere((item) => item.label == id);
     if (index != -1) {
-      list.removeAt(index);
+      unawaited(list.removeAt(index).deleteContent());
     }
     final nextId = id == state.currentId ? null : state.currentId;
     state = state.copyWith(scripts: list, currentId: nextId);
@@ -333,16 +335,23 @@ class ScriptState extends _$ScriptState with AutoDisposeNotifierMixin {
     return state.scripts.indexWhere((item) => item.label == label) != -1;
   }
 
+  String getAvailableLabel(String baseLabel) {
+    if (!isExits(baseLabel)) {
+      return baseLabel;
+    }
+    var i = 1;
+    while (isExits('$baseLabel$i')) {
+      i++;
+    }
+    return '$baseLabel$i';
+  }
+
   Future<void> syncScript(String id) async {
     final script = state.scripts.firstWhere((item) => item.id == id);
     final url = script.url;
     if (url == null || url.isEmpty) return;
     final res = await request.getTextResponseForUrl(url);
-    if (script.content != res.data) {
-      JavaScriptRuntimeManager.invalidateCachedOptions(script.content);
-    }
-    final updated = script.copyWith(content: res.data);
-    setScript(updated);
+    setScript(await script.writeContent(res.data));
   }
 }
 

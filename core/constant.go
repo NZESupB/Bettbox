@@ -7,15 +7,15 @@ import (
 
 	"github.com/metacubex/mihomo/adapter/provider"
 	P "github.com/metacubex/mihomo/component/process"
-	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/log"
 	"github.com/metacubex/mihomo/tunnel"
 )
 
 type ValidateConfigParams struct {
-	Data         string `json:"data"`
-	AgeSecretKey string `json:"age-secret-key"`
+	Data         string       `json:"data"`
+	AgeSecretKey string       `json:"age-secret-key"`
+	Setup        *SetupParams `json:"setup"`
 }
 
 type DecryptAgeConfigParams struct {
@@ -24,8 +24,15 @@ type DecryptAgeConfigParams struct {
 }
 
 type GetConfigParams struct {
+	Path           string   `json:"path"`
+	AgeSecretKey   string   `json:"age-secret-key"`
+	DisabledGroups []string `json:"disabled-groups"`
+}
+
+type ExportConfigParams struct {
 	Path         string `json:"path"`
 	AgeSecretKey string `json:"age-secret-key"`
+	Output       string `json:"output"`
 }
 
 type InitParams struct {
@@ -34,10 +41,18 @@ type InitParams struct {
 }
 
 type SetupParams struct {
-	Config          *config.RawConfig `json:"config"`
 	SelectedMap     map[string]string `json:"selected-map"`
 	TestURL         string            `json:"test-url"`
 	OverrideTestUrl bool              `json:"override-test-url"`
+	ProfilePath     string            `json:"profile-path"`
+	AgeSecretKey    string            `json:"age-secret-key"`
+	ScriptedConfig  string            `json:"scripted-config"`
+	Patch           *PatchParams      `json:"patch"`
+}
+
+type SetupResult struct {
+	Message string `json:"message"`
+	Global  string `json:"global"`
 }
 
 type UpdateParams struct {
@@ -61,10 +76,12 @@ type tunSchema struct {
 	Stack                 *constant.TUNStack `yaml:"stack" json:"stack"`
 	DNSHijack             *[]string          `yaml:"dns-hijack" json:"dns-hijack"`
 	AutoRoute             *bool              `yaml:"auto-route" json:"auto-route"`
+	AutoRedirect          *bool              `yaml:"auto-redirect" json:"auto-redirect,omitempty"`
 	RouteAddress          *[]netip.Prefix    `yaml:"route-address" json:"route-address,omitempty"`
 	RouteExcludeAddress   *[]netip.Prefix    `yaml:"route-exclude-address" json:"route-exclude-address,omitempty"`
 	StrictRoute           *bool              `yaml:"strict-route" json:"strict-route,omitempty"`
 	DisableICMPForwarding *bool              `yaml:"disable-icmp-forwarding" json:"disable-icmp-forwarding,omitempty"`
+	CongestionController  *string            `yaml:"congestion-controller" json:"congestion-controller,omitempty"`
 }
 
 type ChangeProxyParams struct {
@@ -127,12 +144,21 @@ const (
 	crashMethod                    Method = "crash"
 	setupConfigMethod              Method = "setupConfig"
 	getConfigMethod                Method = "getConfig"
+	getRuntimeConfigMethod         Method = "getRuntimeConfig"
+	exportConfigMethod             Method = "exportConfig"
 	flushFakeIPMethod              Method = "flushFakeIP"
 	flushDnsCacheMethod            Method = "flushDnsCache"
 	generateAgeKeyPairMethod              Method = "generateAgeKeyPair"
 	convertAgeSecretKeyToPublicKeyMethod  Method = "convertAgeSecretKeyToPublicKey"
 	getModeMethod                         Method = "getMode"
 	parseExternalProviderContentMethod    Method = "parseExternalProviderContent"
+	getCoreStatusMethod                   Method = "getCoreStatus"
+	getRequestsMethod                     Method = "getRequests"
+	startTrackRequestsMethod              Method = "startTrackRequests"
+	stopTrackRequestsMethod               Method = "stopTrackRequests"
+	clearRequestsMethod                   Method = "clearRequests"
+	getLogsMethod                         Method = "getLogs"
+	clearLogsMethod                       Method = "clearLogs"
 )
 
 type Method string

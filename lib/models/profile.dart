@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:kitony_box/clash/core.dart';
 import 'package:kitony_box/common/common.dart';
 import 'package:kitony_box/enum/enum.dart';
+import 'package:kitony_box/models/core.dart';
+import 'package:kitony_box/state.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'clash_config.dart';
@@ -27,13 +29,19 @@ abstract class SubscriptionInfo with _$SubscriptionInfo {
   factory SubscriptionInfo.fromJson(Map<String, Object?> json) =>
       _$SubscriptionInfoFromJson(json);
 
+  static int? _parseValue(String? value) {
+    if (value == null) return null;
+    return int.tryParse(value) ?? double.tryParse(value)?.toInt();
+  }
+
   factory SubscriptionInfo.formHString(String? info) {
     if (info == null) return const SubscriptionInfo();
     final list = info.split(';');
     Map<String, int?> map = {};
     for (final i in list) {
       final keyValue = i.trim().split('=');
-      map[keyValue[0]] = int.tryParse(keyValue[1]);
+      if (keyValue.length < 2) continue;
+      map[keyValue[0]] = _parseValue(keyValue[1]);
     }
     return SubscriptionInfo(
       upload: map['upload'] ?? 0,
@@ -41,6 +49,21 @@ abstract class SubscriptionInfo with _$SubscriptionInfo {
       total: map['total'] ?? 0,
       expire: map['expire'] ?? 0,
     );
+  }
+}
+
+extension SubscriptionInfoExtension on SubscriptionInfo {
+  String? get expireDesc {
+    if (expire > 0) {
+      final expireDate = DateTime.fromMillisecondsSinceEpoch(
+        expire * 1000,
+      ).show;
+      final isExpired = expire * 1000 < DateTime.now().millisecondsSinceEpoch;
+      return isExpired
+          ? '${appLocalizations.expired} · $expireDate'
+          : expireDate;
+    }
+    return total > 0 ? appLocalizations.infiniteTime : null;
   }
 }
 
@@ -109,7 +132,7 @@ extension OverrideDataExt on OverrideData {
 @freezed
 abstract class OverrideRule with _$OverrideRule {
   const factory OverrideRule({
-    @Default(OverrideRuleType.override) OverrideRuleType type,
+    @Default(OverrideRuleType.added) OverrideRuleType type,
     @Default([]) List<Rule> overrideRules,
     @Default([]) List<Rule> addedRules,
   }) = _OverrideRule;
@@ -169,9 +192,49 @@ extension ProfileExtension on Profile {
     return file;
   }
 
+  Future<void> _writeFile(String content, {SetupParams? setup}) async {
+    final path = await appPath.getProfilePath(id);
+    if (setup == null && await _hasContent(path, content)) return;
+    final tempFile = File('$path.${DateTime.now().microsecondsSinceEpoch}.tmp');
+    await tempFile.parent.create(recursive: true);
+    try {
+      await tempFile.writeAsString(content, flush: true);
+      if (setup != null) {
+        final message = await clashCore.validateConfig(
+          '',
+          setup: setup.copyWith(profilePath: tempFile.path),
+        );
+        if (message.isNotEmpty) {
+          throw message;
+        }
+      }
+      try {
+        await tempFile.rename(path);
+      } catch (_) {
+        await tempFile.copy(path);
+      }
+    } finally {
+      if (await tempFile.exists()) {
+        try {
+          await tempFile.delete();
+        } catch (_) {}
+      }
+    }
+  }
+
+  Future<bool> _hasContent(String path, String content) async {
+    final file = File(path);
+    if (!await file.exists()) return false;
+    try {
+      return await file.readAsString() == content;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<int> get profileLastModified async {
     final file = await getFile();
-    return (await file.lastModified()).microsecondsSinceEpoch;
+    return (await file.stat()).modified.microsecondsSinceEpoch;
   }
 
   Future<Profile> update({bool validate = true}) async {
@@ -195,6 +258,12 @@ extension ProfileExtension on Profile {
         }
       } catch (_) {}
     }
+    content = utils.patchYamlConfig(content);
+    final setup = validate ? await globalState.buildValidateParams(this) : null;
+    if (setup != null) {
+      await _writeFile(content, setup: setup);
+      return copyWith(lastUpdateDate: DateTime.now());
+    }
     if (validate) {
       final message = await clashCore.validateConfig(
         content,
@@ -217,8 +286,7 @@ extension ProfileExtension on Profile {
         }
       }
     }
-    final file = await getFile();
-    await file.writeAsString(content);
+    await _writeFile(content);
     return copyWith(lastUpdateDate: DateTime.now());
   }
 
@@ -232,6 +300,12 @@ extension ProfileExtension on Profile {
           content = decrypted;
         }
       } catch (_) {}
+    }
+    content = utils.patchYamlConfig(content);
+    final setup = await globalState.buildValidateParams(this);
+    if (setup != null) {
+      await _writeFile(content, setup: setup);
+      return copyWith(lastUpdateDate: DateTime.now());
     }
     final message = await clashCore.validateConfig(
       content,
@@ -253,8 +327,7 @@ extension ProfileExtension on Profile {
         throw message;
       }
     }
-    final file = await getFile();
-    await file.writeAsString(content);
+    await _writeFile(content);
     return copyWith(lastUpdateDate: DateTime.now());
   }
 }

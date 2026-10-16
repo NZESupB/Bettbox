@@ -2,7 +2,7 @@ import 'package:kitony_box/common/common.dart';
 import 'package:kitony_box/providers/config.dart';
 import 'package:kitony_box/state.dart';
 import 'package:kitony_box/widgets/widgets.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class OverrideNtpItem extends ConsumerWidget {
@@ -232,12 +232,12 @@ final ntpItems = <Widget>[
   ...generateSection(items: const [OverrideNtpItem()]),
   ...generateSection(
     title: appLocalizations.options,
-    items: const [
-      NtpStatusItem(),
-      WriteToSystemItem(),
-      NtpServerItem(),
-      NtpPortItem(),
-      NtpIntervalItem(),
+    items: [
+      const NtpStatusItem(),
+      if (!system.isAndroid) const WriteToSystemItem(),
+      const NtpServerItem(),
+      const NtpPortItem(),
+      const NtpIntervalItem(),
     ],
   ),
 ];

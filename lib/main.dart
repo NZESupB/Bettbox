@@ -9,9 +9,8 @@ import 'package:kitony_box/plugins/clipboard_ext.dart';
 import 'package:kitony_box/plugins/tile.dart';
 import 'package:kitony_box/plugins/vpn.dart';
 import 'package:kitony_box/state.dart';
-import 'package:code_forge/code_forge.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_displaymode/flutter_displaymode.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:synchronized/synchronized.dart';
 
@@ -37,14 +36,16 @@ Future<void> main(List<String> args) async {
     exit(0);
   }
 
-  if (system.isMacOS) {
+  if (system.isMacOS || appPath.isPortable) {
     final acquire = await singleInstanceLock.acquire();
     if (!acquire) {
-      commonPrint.log(
+      commonPrint.warn(
         'SingleInstanceLock: another instance detected or lock failed, exiting',
       );
-      await _sendControlCommand('show');
-      await Future.delayed(const Duration(milliseconds: 100));
+      if (!appPath.isPortable) {
+        await _sendControlCommand('show');
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
       exit(0);
     }
   }
@@ -57,7 +58,7 @@ Future<void> main(List<String> args) async {
   try {
     await uiManager.initializeUI();
   } catch (e) {
-    commonPrint.log('Failed to initialize UI: $e');
+    commonPrint.error('Failed to initialize UI: $e');
   }
 
   await _runApp();
@@ -71,7 +72,7 @@ Future<void> _sendControlCommand(String command) async {
       return;
     } catch (e) {
       if (i == 4) {
-        commonPrint.log('Failed to send $command command: $e');
+        commonPrint.warn('Failed to send $command command: $e');
         return;
       }
       await Future.delayed(const Duration(milliseconds: 200));
@@ -80,18 +81,10 @@ Future<void> _sendControlCommand(String command) async {
 }
 
 Future<void> _runApp() async {
-  try {
-    await RustLib.init();
-  } catch (e) {
-    commonPrint.log('Failed to initialize code_forge RustLib: $e');
-  }
+  await ensureRustLib();
 
   if (system.isAndroid) {
-    try {
-      await FlutterDisplayMode.setHighRefreshRate();
-    } catch (e) {
-      commonPrint.log('Failed to set high refresh rate: $e');
-    }
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
   await android?.init();
 
@@ -100,7 +93,7 @@ Future<void> _runApp() async {
     clipboardExt.init();
   }
   HttpOverrides.global = KitonyBoxHttpOverrides();
-  runApp(ProviderScope(child: const Application()));
+  runApp(ProviderScope(retry: (_, _) => null, child: const Application()));
 }
 
 @pragma('vm:entry-point')
@@ -148,7 +141,7 @@ Future<void> _service(List<String> flags) async {
           }
         });
       } catch (e) {
-        commonPrint.log('Smart auto stop check failed: $e');
+        commonPrint.warn('Smart auto stop check failed: $e');
       }
     }
 
@@ -217,9 +210,10 @@ Future<void> _service(List<String> flags) async {
           params,
           globalState.getCoreState(),
         );
-        debugPrint(res);
-        if (res.isNotEmpty) {
-          commonPrint.log('QuickStart failed with error: $res');
+        final message = res.message;
+        debugPrint(message);
+        if (message.isNotEmpty) {
+          commonPrint.error('QuickStart failed with error: $message');
           await vpn?.stop();
           return;
         }
@@ -234,19 +228,9 @@ Future<void> _service(List<String> flags) async {
           await vpn?.updateNotificationSpeed(profileName, '↑0B/s ↓0B/s');
         }
 
-        if (globalState.config.appSetting.openLogs) {
-          await clashLibHandler.invokeAction(
-            '{"id": "quickStartLog", "method": "startLog"}',
-          );
-        } else {
-          await clashLibHandler.invokeAction(
-            '{"id": "quickStopLog", "method": "stopLog"}',
-          );
-        }
-
         clashLibHandler.startListener();
       } catch (e) {
-        commonPrint.log('Fatal error during service background start: $e');
+        commonPrint.error('Fatal error during service background start: $e');
         await vpn?.stop();
       }
     });
@@ -256,7 +240,9 @@ Future<void> _service(List<String> flags) async {
 void _handleMainIpc(ClashLibHandler clashLibHandler) {
   final sendPort = IsolateNameServer.lookupPortByName(mainIsolate);
   if (sendPort == null) {
-    commonPrint.log('Service: mainIsolate sendPort not found, IPC unavailable');
+    commonPrint.warn(
+      'Service: mainIsolate sendPort not found, IPC unavailable',
+    );
     return;
   }
 
@@ -283,7 +269,7 @@ void _safeSend(SendPort sendPort, dynamic message) {
   try {
     sendPort.send(message);
   } catch (e) {
-    commonPrint.log('Service: IPC send failed: $e');
+    commonPrint.warn('Service: IPC send failed: $e');
     final retryPort = IsolateNameServer.lookupPortByName(mainIsolate);
     if (retryPort != null) {
       try {

@@ -122,7 +122,7 @@ class KitonyBoxVpnService : VpnService(), BaseServiceInterface {
                 .onFailure { Log.e(TAG, "Invalid DNS: ${options.dnsServerAddress}") }
         }
 
-        setMtu(options.mtu.coerceIn(1280..65535).takeIf { it > 0 } ?: 1480)
+        setMtu(options.mtu.takeIf { it in 1280..65535 } ?: 9000)
 
         val accessControl = options.accessControl
         if (accessControl.enable) {
@@ -170,16 +170,19 @@ class KitonyBoxVpnService : VpnService(), BaseServiceInterface {
                     updateNotificationSpeed(profileName, speedInfo)
                 }
             }
-        } else if (intent?.action == "RESTORE_NOTIFICATION") {
-            isSpeedNotificationEnabled = false
-            if (hasStartedForeground) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    startForeground()
-                }
-            }
         }
         return START_STICKY
     }
+
+    internal suspend fun restoreNotification() {
+        isSpeedNotificationEnabled = false
+        pendingSpeedProfile = null
+        pendingSpeedInfo = null
+        if (hasStartedForeground) {
+            startForeground()
+        }
+    }
+
     override fun stop() {
         if (isStopped) return
         isStopped = true
@@ -218,10 +221,12 @@ class KitonyBoxVpnService : VpnService(), BaseServiceInterface {
 
     @SuppressLint("ForegroundServiceType")
     override suspend fun startForeground() {
-        ensureNotificationChannel()
+        val isSuspended = GlobalState.isSmartStopped
+        val isHighPriority = GlobalState.isNotificationHighPriority
+        ensureNotificationChannel(isSuspended, isHighPriority)
         val title: String
         val content: String
-        if (GlobalState.isSmartStopped) {
+        if (isSuspended) {
             title = getString(R.string.core_suspended)
             content = getString(R.string.smart_auto_stop_service_running)
         } else {
@@ -230,12 +235,11 @@ class KitonyBoxVpnService : VpnService(), BaseServiceInterface {
         }
 
         lastNotificationText = null
-        val builder = notificationBuilder()
+        val builder = createKitonyBoxNotificationBuilder(isSuspended, isHighPriority)
         val notification = builder
             .setContentTitle(title)
             .setContentText(content)
             .setStyle(null)
-            .setTicker("$title: $content")
             .build()
 
         val isFirstTime = !hasStartedForeground
@@ -245,12 +249,12 @@ class KitonyBoxVpnService : VpnService(), BaseServiceInterface {
 
         val pendingProfile = pendingSpeedProfile
         val pendingSpeed = pendingSpeedInfo
-        if (isFirstTime && isSpeedNotificationEnabled && pendingProfile != null && pendingSpeed != null) {
+        if (!isSuspended && GlobalState.isSpeedNotificationEnabled && pendingProfile != null && pendingSpeed != null) {
             updateNotificationSpeed(pendingProfile, pendingSpeed)
             return
         }
 
-        this.startForeground(notification, useSpecialType = !GlobalState.isSmartStopped)
+        this.startForeground(notification, useSpecialType = !isSuspended)
     }
 
     @SuppressLint("ForegroundServiceType")
@@ -278,13 +282,18 @@ class KitonyBoxVpnService : VpnService(), BaseServiceInterface {
             .setContentTitle(profileName)
             .setContentText(speedInfo)
             .setStyle(null)
-            .setTicker("$profileName: $speedInfo")
             .build()
 
-        if (hasStartedForeground) {
+        if (!hasStartedForeground) {
+            hasStartedForeground = true
             runCatching {
                 this.startForeground(notification, useSpecialType = !GlobalState.isSmartStopped)
             }.onFailure { Log.e(TAG, "updateNotificationSpeed startForeground error: ${it.message}") }
+        } else {
+            runCatching {
+                getSystemService(android.app.NotificationManager::class.java)
+                    ?.notify(GlobalState.NOTIFICATION_ID, notification)
+            }.onFailure { Log.e(TAG, "updateNotificationSpeed notify error: ${it.message}") }
         }
     }
 

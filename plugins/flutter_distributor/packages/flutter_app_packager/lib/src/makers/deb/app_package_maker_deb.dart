@@ -48,8 +48,10 @@ class AppPackageMakerDeb extends AppPackageMaker {
     /// /usr/share/icons/hicolor/256x256/apps
 
     final debianDir = path.join(packagingDirectory.path, 'DEBIAN');
-    final applicationsDir =
-        path.join(packagingDirectory.path, 'usr/share/applications');
+    final applicationsDir = path.join(
+      packagingDirectory.path,
+      'usr/share/applications',
+    );
     final icon128Dir = path.join(
       packagingDirectory.path,
       'usr/share/icons/hicolor/128x128/apps',
@@ -88,12 +90,28 @@ class AppPackageMakerDeb extends AppPackageMaker {
       );
     }
 
+    for (final entry in makeConfig.extraFiles.entries) {
+      final sourceFile = File(entry.key);
+      if (!sourceFile.existsSync()) {
+        throw MakeError('extra file ${entry.key} path wasn\'t found');
+      }
+
+      final destinationPath = path.join(packagingDirectory.path, entry.value);
+      final destinationDir = Directory(path.dirname(destinationPath));
+      if (!destinationDir.existsSync()) {
+        destinationDir.createSync(recursive: true);
+      }
+      await sourceFile.copy(destinationPath);
+      await $('chmod', ['644', destinationPath]);
+    }
+
     // create & write the files got from makeConfig
     final controlFile = File(path.join(debianDir, 'control'));
     final postinstFile = File(path.join(debianDir, 'postinst'));
     final postrmFile = File(path.join(debianDir, 'postrm'));
-    final desktopEntryFile =
-        File(path.join(applicationsDir, '${makeConfig.appBinaryName}.desktop'));
+    final desktopEntryFile = File(
+      path.join(applicationsDir, '${makeConfig.appBinaryName}.desktop'),
+    );
 
     if (!controlFile.existsSync()) controlFile.createSync();
     if (!postinstFile.existsSync()) postinstFile.createSync();
@@ -115,12 +133,11 @@ class AppPackageMakerDeb extends AppPackageMaker {
       '${packagingDirectory.path}/usr/share/${makeConfig.appBinaryName}/',
     ]);
 
-    // Preserve setuid bit on the core binary when packaging as root/fakeroot.
     final coreFile = File(
       '${packagingDirectory.path}/usr/share/${makeConfig.appBinaryName}/KitonyBoxCore',
     );
     if (coreFile.existsSync()) {
-      await $('chmod', ['+sx', coreFile.path]);
+      await $('chmod', ['0755', coreFile.path]);
     }
 
     ProcessResult processResult = await $('dpkg-deb', [

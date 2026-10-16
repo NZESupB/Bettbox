@@ -73,28 +73,30 @@ Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLA
 """;
 
 class InnoSetupScript {
-  InnoSetupScript({
-    required this.makeConfig,
-  });
+  InnoSetupScript({required this.makeConfig});
 
   factory InnoSetupScript.fromMakeConfig(MakeExeConfig makeConfig) {
-    return InnoSetupScript(
-      makeConfig: makeConfig,
-    );
+    return InnoSetupScript(makeConfig: makeConfig);
   }
 
   final MakeExeConfig makeConfig;
 
   Future<File> createFile() async {
-    final isDev = makeConfig.flavor == 'dev' ||
+    final isDev =
+        makeConfig.flavor == 'dev' ||
         (makeConfig.displayName?.contains('Dev') ?? false);
-    final coreExecutableName = isDev ? 'KitonyBoxDevCore.exe' : 'KitonyBoxCore.exe';
+    final coreExecutableName = isDev
+        ? 'KitonyBoxDevCore.exe'
+        : 'KitonyBoxCore.exe';
     final helperExecutableName = isDev
         ? 'KitonyBoxDevHelperService.exe'
         : 'KitonyBoxHelperService.exe';
     final helperServiceName = isDev
         ? 'KitonyBoxDevHelperService'
         : 'KitonyBoxHelperService';
+    final helperPipeName = isDev
+        ? r'\\.\pipe\KitonyBoxDev.Helper'
+        : r'\\.\pipe\KitonyBox.Helper';
     final taskName = isDev ? 'KitonyBox Dev' : 'KitonyBox';
     Map<String, dynamic> variables = {
       'APP_ID': makeConfig.appId,
@@ -118,6 +120,7 @@ class InnoSetupScript {
       'CORE_EXECUTABLE_NAME': coreExecutableName,
       'HELPER_EXECUTABLE_NAME': helperExecutableName,
       'HELPER_SERVICE_NAME': helperServiceName,
+      'HELPER_PIPE_NAME': helperPipeName,
       'TASK_NAME': taskName,
     }..removeWhere((key, value) => value == null);
 
@@ -127,10 +130,7 @@ class InnoSetupScript {
     String scriptTemplate = _template;
     if (makeConfig.scriptTemplate != null) {
       File scriptTemplateFile = File(
-        path.join(
-          'windows/packaging/exe/',
-          makeConfig.scriptTemplate!,
-        ),
+        path.join('windows/packaging/exe/', makeConfig.scriptTemplate!),
       );
       scriptTemplate = scriptTemplateFile.readAsStringSync();
     }

@@ -1,10 +1,11 @@
 // ignore_for_file: invalid_annotation_target
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:kitony_box/common/common.dart';
 import 'package:kitony_box/enum/enum.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'generated/common.freezed.dart';
@@ -15,7 +16,7 @@ abstract class NavigationItem with _$NavigationItem {
   const factory NavigationItem({
     required Icon icon,
     required PageLabel label,
-    final String? description,
+    String? description,
     required WidgetBuilder builder,
     @Default(true) bool keep,
     String? path,
@@ -106,33 +107,105 @@ extension TrackerInfoExt on TrackerInfo {
   }
 }
 
-String _logDateTime(dynamic _) {
-  return DateTime.now().showFull;
+DateTime _logTime(Object? value) {
+  if (value is num) {
+    return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+  }
+  return DateTime.now();
 }
 
-// String _logId(_) {
-//   return utils.id;
-// }
+final _logModuleRegExp = RegExp(
+  r'^\[([A-Za-z][A-Za-z0-9_-]{0,15}(?: [A-Za-z0-9_-]{1,15})?)\]\s*',
+);
 
 @freezed
 abstract class Log with _$Log {
   const factory Log({
-    // @JsonKey(fromJson: _logId) required String id,
     @JsonKey(name: 'LogLevel') @Default(LogLevel.error) LogLevel logLevel,
     @JsonKey(name: 'Payload') @Default('') String payload,
-    @JsonKey(fromJson: _logDateTime) required String dateTime,
+    @JsonKey(fromJson: _logTime) required DateTime time,
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    @Default(LogSource.core)
+    LogSource source,
+    @JsonKey(includeFromJson: false, includeToJson: false) String? module,
   }) = _Log;
 
-  factory Log.app(String payload) {
+  factory Log.core(Map<String, Object?> json) {
+    final raw = Log.fromJson(json);
+    final log = raw.copyWith(payload: raw.payload.trimRight());
+    final match = _logModuleRegExp.firstMatch(log.payload);
+    if (match == null) return log;
+    final module = match.group(1);
+    final payload = log.payload.substring(match.end);
+    if (module == 'APP') {
+      return log.copyWith(payload: payload, source: LogSource.app);
+    }
+    return log.copyWith(payload: payload, module: module);
+  }
+
+  factory Log.app(String payload, {LogLevel level = LogLevel.info}) {
     return Log(
-      logLevel: LogLevel.info,
-      payload: payload,
-      dateTime: _logDateTime(null),
-      // id: _logId(null),
+      logLevel: level,
+      payload: payload.trimRight(),
+      time: DateTime.now(),
+      source: LogSource.app,
     );
   }
 
   factory Log.fromJson(Map<String, Object?> json) => _$LogFromJson(json);
+}
+
+extension LogExt on Log {
+  String get tag => module ?? (source == LogSource.app ? 'APP' : 'Core');
+
+  String get raw {
+    final module = this.module;
+    return module == null ? payload : '[$module] $payload';
+  }
+
+  String get line {
+    final module = this.module;
+    final origin = module == null ? source.name : '${source.name}/$module';
+    return '${time.showFullMillis} [${logLevel.name}] [$origin] $payload';
+  }
+}
+
+typedef FilteredLogs = ({List<Log> logs, int errors, int warnings});
+
+@freezed
+abstract class LogsFilterState with _$LogsFilterState {
+  const factory LogsFilterState({
+    LogSource? source,
+    @Default({}) Set<LogLevel> levels,
+    String? module,
+    @Default('') String query,
+  }) = _LogsFilterState;
+}
+
+extension LogsFilterStateExt on LogsFilterState {
+  bool get hasFacet => source != null || levels.isNotEmpty || module != null;
+
+  FilteredLogs apply(List<Log> logs) {
+    final lowQuery = query.toLowerCase();
+    final result = <Log>[];
+    var errors = 0;
+    var warnings = 0;
+    for (final log in logs) {
+      if (source != null && log.source != source) continue;
+      if (module != null && log.tag != module) continue;
+      if (lowQuery.isNotEmpty && !log.raw.toLowerCase().contains(lowQuery)) {
+        continue;
+      }
+      if (log.logLevel == LogLevel.error) {
+        errors++;
+      } else if (log.logLevel == LogLevel.warning) {
+        warnings++;
+      }
+      if (levels.isNotEmpty && !levels.contains(log.logLevel)) continue;
+      result.add(log);
+    }
+    return (logs: result, errors: errors, warnings: warnings);
+  }
 }
 
 @freezed
@@ -213,6 +286,20 @@ abstract class FileInfo with _$FileInfo {
 extension FileInfoExt on FileInfo {
   String get desc =>
       '${TrafficValue(value: size).show}  ·  ${lastModified.lastUpdateTimeDesc}';
+}
+
+@freezed
+abstract class NetworkInfo with _$NetworkInfo {
+  const factory NetworkInfo({
+    @Default('') String type,
+    @JsonKey(name: 'interface') @Default('') String interfaceName,
+    @Default('') String ip,
+    @Default('') String gateway,
+    @Default([]) List<String> dns,
+  }) = _NetworkInfo;
+
+  factory NetworkInfo.fromJson(Map<String, Object?> json) =>
+      _$NetworkInfoFromJson(json);
 }
 
 @freezed
@@ -298,11 +385,38 @@ abstract class Group with _$Group {
   factory Group.fromJson(Map<String, Object?> json) => _$GroupFromJson(json);
 }
 
-extension GroupsExt on List<Group> {
-  Group? getGroup(String groupName) {
-    final index = indexWhere((element) => element.name == groupName);
-    return index != -1 ? this[index] : null;
+class _GroupsIndex {
+  _GroupsIndex(this._groups) {
+    for (final group in _groups) {
+      byName.putIfAbsent(group.name, () => group);
+    }
   }
+
+  final List<Group> _groups;
+  final Map<String, Group> byName = {};
+
+  late final Map<String, Proxy> rematchProxies = () {
+    final result = <String, Proxy>{};
+    for (final group in _groups) {
+      for (final proxy in group.all) {
+        final type = proxy.type;
+        if (type.length == 7 && type.toUpperCase() == 'REMATCH') {
+          result.putIfAbsent(proxy.name, () => proxy);
+        }
+      }
+    }
+    return result;
+  }();
+}
+
+final _groupsIndexes = Expando<_GroupsIndex>();
+
+extension GroupsExt on List<Group> {
+  _GroupsIndex get _index => _groupsIndexes[this] ??= _GroupsIndex(this);
+
+  Group? getGroup(String groupName) => _index.byName[groupName];
+
+  Proxy? getRematchProxy(String proxyName) => _index.rematchProxies[proxyName];
 }
 
 extension GroupExt on Group {
@@ -428,10 +542,10 @@ class IpInfo {
   final String? continent;
   final String? continentCode;
 
-  const IpInfo({
+  IpInfo({
     required this.ip,
     required this.countryCode,
-    this.country,
+    String? country,
     this.province,
     this.city,
     this.isp,
@@ -440,10 +554,21 @@ class IpInfo {
     this.asDomain,
     this.continent,
     this.continentCode,
-  });
+  }) : country = _normalizeCountry(country);
+
+  static String? _normalizeCountry(String? country) {
+    if (country == null) return null;
+    final trimmed = country.trim();
+    if (trimmed.toLowerCase() == 'taiwan') {
+      return 'Taiwan (China)';
+    }
+    if (trimmed == '台湾' || trimmed == '台灣') {
+      return '$trimmed (中国)';
+    }
+    return country;
+  }
 
   static IpInfo fromJson(Map<String, dynamic> json) {
-    // myip.ipip.net 格式: {"ret":"ok", "data":{"ip":"...", "location":["中国", "浙江", "绍兴", "", "电信"]}}
     if (json['ret'] == 'ok' && json['data'] is Map) {
       final data = json['data'] as Map;
       final ip = data['ip']?.toString() ?? '';
@@ -491,7 +616,6 @@ class IpInfo {
     }
 
     final ip = json['ip']?.toString() ?? '';
-    // myip.la 格式: {"ip":"...", "location":{"country_code":"...", "country_name":"...", "province":"...", "city":"..."}}
     if (json['location'] is Map) {
       final loc = json['location'] as Map;
       final countryCode = loc['country_code']?.toString() ?? '';
@@ -508,8 +632,15 @@ class IpInfo {
         );
       }
     }
-    // ip-api.com 格式: {"status":"success", "country":"...", "countryCode":"...", "regionName":"...", "city":"...", "isp":"...", "org":"...", "as":"...", "query":"..."}
-    if (json['query'] != null || json['countryCode'] != null) {
+
+    if (json['query'] != null ||
+        json['countryCode'] != null ||
+        json['status'] != null) {
+      if (json['status'] != null && json['status'] != 'success') {
+        throw FormatException(
+          'ip-api.com status not success: ${json['message']}',
+        );
+      }
       final ip = (json['query'] ?? json['ip'])?.toString() ?? '';
       final countryCode =
           (json['countryCode'] ?? json['country_code'])?.toString() ?? '';
@@ -524,7 +655,6 @@ class IpInfo {
           ? org
           : (json['as_name']?.toString());
 
-      // 仅取最前面的 AS 号 (例如: "AS37963 Hangzhou Alibaba..." -> "AS37963")
       final rawAs = (json['as'] ?? json['asn'])?.toString() ?? '';
       final asnMatch = RegExp(
         r'^(AS\d+)',
@@ -547,7 +677,33 @@ class IpInfo {
         );
       }
     }
-    // ipinfo.io 格式: {"ip":"...", "country_code":"...", "country":"...", "asn":"...", "as_name":"...", "as_domain":"...", "continent":"...", "continent_code":"..."}
+
+    if (json['country_code'] != null && json['country_code3'] != null) {
+      final ip = json['ip']?.toString() ?? '';
+      final org =
+          json['organization_name']?.toString() ??
+          json['organization']?.toString();
+      final rawAsn = json['asn']?.toString() ?? '';
+      final asn = rawAsn.isNotEmpty
+          ? (rawAsn.toUpperCase().startsWith('AS')
+                ? rawAsn.toUpperCase()
+                : 'AS$rawAsn')
+          : null;
+      if (ip.isNotEmpty) {
+        return IpInfo(
+          ip: ip,
+          countryCode: json['country_code']?.toString() ?? '',
+          country: json['country']?.toString(),
+          province: json['region']?.toString(),
+          city: json['city']?.toString(),
+          isp: org,
+          asName: org,
+          asn: asn,
+          continentCode: json['continent_code']?.toString(),
+        );
+      }
+    }
+
     final countryCode =
         (json['country_code'] ?? json['country'])?.toString() ?? '';
     final country = json['country']?.toString();
@@ -572,24 +728,6 @@ class IpInfo {
   }
 
   static IpInfo fromCloudflareTrace(String traceText) {
-    // Cloudflare trace格式示例:
-    // fl=...
-    // h=...
-    // ip=1.2.3.4
-    // ts=...
-    // visit_scheme=https
-    // uag=...
-    // colo=...
-    // sliver=none
-    // http=http/2
-    // loc=US
-    // tls=TLSv1.3
-    // sni=plaintext
-    // warp=off
-    // gateway=off
-    // rbi=off
-    // kex=X25519
-
     final lines = traceText.split('\n');
     String? ip;
     String? countryCode;
@@ -835,25 +973,50 @@ abstract class Script with _$Script {
   const factory Script({
     required String id,
     required String label,
-    required String content,
+    @Default('') String content,
     String? url,
     @JsonKey(name: 'custom-options') Map<String, bool>? customOptions,
+    String? digest,
+    @Default(false) bool compatible,
+    bool? volatile,
   }) = _Script;
 
-  factory Script.create({
-    required String label,
-    required String content,
-    String? url,
-  }) {
-    return Script(id: utils.uuidV4, label: label, content: content, url: url);
+  factory Script.create({required String label, String? url}) {
+    return Script(id: utils.uuidV4, label: label, url: url);
   }
 
   factory Script.fromJson(Map<String, Object?> json) => _$ScriptFromJson(json);
 }
 
+final volatileScriptPattern = RegExp(r'\bDate\b|Math\s*\.\s*random');
+
 extension ScriptExt on Script {
-  bool get isCompatibleWithKitonyBox {
-    final head = content.length > 2000 ? content.substring(0, 2000) : content;
-    return head.contains('Compatible_With_KitonyBox');
+  Future<String> readContent() async {
+    if (content.isNotEmpty) return content;
+    final file = File(await appPath.getScriptPath(id));
+    if (!await file.exists()) return '';
+    return file.readAsString();
+  }
+
+  Future<Script> writeContent(String value) async {
+    final path = await appPath.getScriptPath(id);
+    final temp = File('$path.${DateTime.now().microsecondsSinceEpoch}.tmp');
+    await temp.parent.create(recursive: true);
+    await temp.writeAsString(value, flush: true);
+    await temp.rename(path);
+    final head = value.length > 2000 ? value.substring(0, 2000) : value;
+    return copyWith(
+      content: '',
+      digest: value.toMd5(),
+      compatible: head.contains('Compatible_With_KitonyBox'),
+      volatile: volatileScriptPattern.hasMatch(value),
+    );
+  }
+
+  Future<void> deleteContent() async {
+    final file = File(await appPath.getScriptPath(id));
+    if (await file.exists()) {
+      await file.delete();
+    }
   }
 }

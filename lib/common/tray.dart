@@ -4,7 +4,7 @@ import 'package:kitony_box/enum/enum.dart';
 import 'package:kitony_box/models/models.dart';
 import 'package:kitony_box/state.dart';
 import 'package:kitony_box/views/proxies/common.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:restart_app/restart_app.dart';
@@ -19,6 +19,7 @@ class Tray {
   bool _isUpdating = false;
   bool _pendingFocus = false;
   bool _pendingSilent = false;
+  bool showHiddenGroups = false;
 
   static const _debounceDelay = Duration(milliseconds: 300);
 
@@ -75,6 +76,7 @@ class Tray {
             globalState.config.themeProps.invertTrayIcon,
       ),
       isTemplate: system.isMacOS && isStart,
+      id: AppIdentity.compactName,
     );
     if (system.isMacOS) {
       await trayManager.setActive(isStart);
@@ -467,21 +469,21 @@ class Tray {
         try {
           await WakelockPlus.disable();
         } catch (e) {
-          commonPrint.log('WakeLock disable OS error: $e');
+          commonPrint.warn('WakeLock disable OS error: $e');
         }
         globalState.appController.stopWakelockAutoRecovery();
       } else {
         try {
           await WakelockPlus.enable();
         } catch (e) {
-          commonPrint.log('WakeLock enable OS error: $e');
+          commonPrint.warn('WakeLock enable OS error: $e');
         }
         globalState.appController.startWakelockAutoRecovery();
       }
       globalState.updateWakelockState(!currentEnabled);
       await globalState.appController.updateTray();
     } catch (e) {
-      commonPrint.log('WakeLock toggle error: $e');
+      commonPrint.warn('WakeLock toggle error: $e');
     }
   }
 
@@ -551,7 +553,7 @@ class Tray {
             : null,
       );
     } catch (e) {
-      commonPrint.log('Delay test error: $e');
+      commonPrint.warn('Delay test error: $e');
     } finally {
       if (system.isMacOS) {
         _stopLoadingAnimation();

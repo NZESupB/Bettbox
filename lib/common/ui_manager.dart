@@ -104,7 +104,7 @@ class UiManager {
         'UI extracted successfully to: $uiPath (v$currentVersion)',
       );
     } catch (e) {
-      commonPrint.log('Error extracting UI: $e');
+      commonPrint.error('Error extracting UI: $e');
       rethrow;
     }
   }
@@ -137,7 +137,7 @@ class UiManager {
         commonPrint.log('UI cleared successfully');
       }
     } catch (e) {
-      commonPrint.log('Error clearing UI: $e');
+      commonPrint.warn('Error clearing UI: $e');
     }
   }
 }

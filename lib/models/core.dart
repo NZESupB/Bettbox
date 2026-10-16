@@ -26,24 +26,36 @@ abstract mixin class AppMessageListener {
 @freezed
 abstract class SetupParams with _$SetupParams {
   const factory SetupParams({
-    @JsonKey(name: 'config') required Map<String, dynamic> config,
     @JsonKey(name: 'selected-map') required Map<String, String> selectedMap,
     @JsonKey(name: 'test-url') required String testUrl,
     @JsonKey(name: 'override-test-url') @Default(true) bool overrideTestUrl,
+    @JsonKey(name: 'profile-path') @Default('') String profilePath,
+    @JsonKey(name: 'age-secret-key') @Default('') String ageSecretKey,
+    @JsonKey(name: 'scripted-config') @Default('') String scriptedConfig,
+    Map<String, dynamic>? patch,
   }) = _SetupParams;
 
   factory SetupParams.fromJson(Map<String, dynamic> json) =>
       _$SetupParamsFromJson(json);
 }
 
-// extension SetupParamsExt on SetupParams {
-//   Map<String, dynamic> get json {
-//     final json = Map<String, dynamic>.from(config);
-//     json["selected-map"] = selectedMap;
-//     json["test-url"] = testUrl;
-//     return json;
-//   }
-// }
+@freezed
+abstract class SetupResult with _$SetupResult {
+  const factory SetupResult({
+    @Default('') String message,
+    @Default('') String global,
+  }) = _SetupResult;
+
+  factory SetupResult.fromJson(Map<String, dynamic> json) =>
+      _$SetupResultFromJson(json);
+
+  factory SetupResult.fromData(dynamic data) {
+    if (data is Map) {
+      return SetupResult.fromJson(Map<String, dynamic>.from(data));
+    }
+    return SetupResult(message: data?.toString() ?? '');
+  }
+}
 
 @freezed
 abstract class UpdateParams with _$UpdateParams {
@@ -94,6 +106,7 @@ abstract class AndroidVpnOptions with _$AndroidVpnOptions {
     @Default('config') String routeMode,
     required String dnsServerAddress,
     @Default(false) bool dozeSuspend,
+    @Default(9000) int mtu,
   }) = _AndroidVpnOptions;
 
   factory AndroidVpnOptions.fromJson(Map<String, Object?> json) =>
@@ -261,4 +274,25 @@ extension ActionResultExt on ActionResult {
       return Result.error(data);
     }
   }
+}
+
+@freezed
+abstract class CoreStatus with _$CoreStatus {
+  const factory CoreStatus({
+    @Default(0) int physical,
+    @JsonKey(name: 'in-use') @Default(0) int inUse,
+    @Default(0) int reclaimable,
+    @Default(0) int goroutines,
+    @JsonKey(name: 'heap-objects') @Default(0) int heapObjects,
+    @JsonKey(name: 'last-gc') @Default(0) int lastGC,
+    @Default(0) int rules,
+    @Default(0) int proxies,
+    @JsonKey(name: 'proxy-groups') @Default(0) int proxyGroups,
+    @JsonKey(name: 'rule-providers') @Default(0) int ruleProviders,
+    @JsonKey(name: 'proxy-providers') @Default(0) int proxyProviders,
+    @JsonKey(name: 'geodata-use') @Default('None') String geodataUse,
+  }) = _CoreStatus;
+
+  factory CoreStatus.fromJson(Map<String, Object?> json) =>
+      _$CoreStatusFromJson(json);
 }

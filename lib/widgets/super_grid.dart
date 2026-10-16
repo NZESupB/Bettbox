@@ -8,7 +8,7 @@ import 'package:kitony_box/widgets/activate_box.dart';
 import 'package:kitony_box/widgets/card.dart';
 import 'package:kitony_box/widgets/grid.dart';
 import 'package:defer_pointer/defer_pointer.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/physics.dart';
 
 typedef VoidCallback = void Function();
@@ -127,7 +127,7 @@ class SuperGridState extends State<SuperGrid> with TickerProviderStateMixin {
 
     _shakeController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 120),
+      duration: const Duration(milliseconds: 125),
     );
 
     _shakeAnimation = Tween<double>(begin: -0.012, end: 0.012).animate(

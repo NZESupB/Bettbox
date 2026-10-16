@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class FloatLayout extends StatelessWidget {
   final Widget floatingWidget;
@@ -20,7 +20,7 @@ class FloatLayout extends StatelessWidget {
         Positioned(
           bottom: 0,
           right: 0,
-          child: Container(child: floatingWidget),
+          child: SafeArea(top: false, left: false, child: floatingWidget),
         ),
       ],
     );

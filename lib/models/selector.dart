@@ -1,8 +1,7 @@
-import 'package:collection/collection.dart';
 import 'package:kitony_box/common/common.dart';
 import 'package:kitony_box/enum/enum.dart';
 import 'package:kitony_box/models/models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'generated/selector.freezed.dart';
@@ -107,9 +106,7 @@ abstract class ProxiesListState with _$ProxiesListState {
   const factory ProxiesListState({
     required List<Group> groups,
     required Set<String> currentUnfoldSet,
-    required ProxiesSortType proxiesSortType,
     required ProxyCardType proxyCardType,
-    required num sortNum,
     required int columns,
   }) = _ProxiesListState;
 }
@@ -189,39 +186,33 @@ extension PackageListSelectorStateExt on PackageListSelectorState {
         );
 
     final combined = [...filtered, ...manualPackages];
-    return combined
-        .sorted((a, b) {
-          return switch (sort) {
-            AccessSortType.none => utils.sortByChar(
-              utils.getPinyin(a.label),
-              utils.getPinyin(b.label),
-            ),
-            AccessSortType.installTime => b.firstInstallTime.compareTo(
-              a.firstInstallTime,
-            ),
-            AccessSortType.updateTime => b.lastUpdateTime.compareTo(
-              a.lastUpdateTime,
-            ),
-          };
-        })
-        .sorted((a, b) {
-          final isSelectA = selectedList.contains(a.packageName);
-          final isSelectB = selectedList.contains(b.packageName);
-          if (isSelectA && isSelectB) return 0;
-          if (isSelectA) return -1;
-          if (isSelectB) return 1;
-          return 0;
-        });
-  }
-}
+    final selectedSet = selectedList.toSet();
+    int comparePackages(Package a, Package b) {
+      final isSelectA = selectedSet.contains(a.packageName);
+      final isSelectB = selectedSet.contains(b.packageName);
+      if (isSelectA != isSelectB) {
+        return isSelectA ? -1 : 1;
+      }
+      final bySort = switch (sort) {
+        AccessSortType.none => utils.sortByChar(
+          utils.getPinyin(a.label),
+          utils.getPinyin(b.label),
+        ),
+        AccessSortType.installTime => b.firstInstallTime.compareTo(
+          a.firstInstallTime,
+        ),
+        AccessSortType.updateTime => b.lastUpdateTime.compareTo(
+          a.lastUpdateTime,
+        ),
+      };
+      if (bySort != 0) {
+        return bySort;
+      }
+      return a.packageName.compareTo(b.packageName);
+    }
 
-@freezed
-abstract class ProxiesListHeaderSelectorState
-    with _$ProxiesListHeaderSelectorState {
-  const factory ProxiesListHeaderSelectorState({
-    required double offset,
-    required int currentIndex,
-  }) = _ProxiesListHeaderSelectorState;
+    return combined..sort(comparePackages);
+  }
 }
 
 @freezed

@@ -80,6 +80,8 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             "isSmartStopped" -> result.success(GlobalState.isSmartStopped)
             "getLocalIpAddresses" -> result.success(VpnPlugin.getLocalIpAddresses())
             "getLocalGateways" -> result.success(VpnPlugin.getLocalGateways())
+            "getNetworkInfo" -> result.success(VpnPlugin.getNetworkInfo())
+            "getCurrentDns" -> result.success(VpnPlugin.getCurrentDns())
             "setQuickResponse" -> {
                 VpnPlugin.setQuickResponse(call.argument<Boolean>("enabled") ?: false)
                 result.success(true)
@@ -107,22 +109,13 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 result.success(true)
             }
             "restoreNotification" -> {
-                val context = com.appshub.kitonybox.KitonyBoxApplication.getAppContext()
-                if (context != null) {
-                    com.appshub.kitonybox.GlobalState.isSpeedNotificationEnabled = false
-                    android.service.quicksettings.TileService.requestListeningState(
-                        context,
-                        android.content.ComponentName(context, com.appshub.kitonybox.services.KitonyBoxTileService::class.java)
-                    )
-
-                    val intent = android.content.Intent(
-                        context, 
-                        com.appshub.kitonybox.services.KitonyBoxVpnService::class.java
-                    ).apply {
-                        action = "RESTORE_NOTIFICATION"
-                    }
-                    runCatching { context.startService(intent) }
-                }
+                GlobalState.isSpeedNotificationEnabled = false
+                VpnPlugin.restoreNotification()
+                result.success(true)
+            }
+            "setHighPriorityNotification" -> {
+                val enabled = call.argument<Boolean>("enabled") ?: false
+                VpnPlugin.setHighPriorityNotification(enabled)
                 result.success(true)
             }
             else -> result.notImplemented()

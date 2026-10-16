@@ -6,12 +6,15 @@ import (
 	"core/state"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net"
 	"os"
+	"regexp"
 	"runtime"
 	"runtime/debug"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/metacubex/mihomo/adapter"
@@ -34,13 +37,22 @@ import (
 	"github.com/metacubex/mihomo/tunnel"
 	"github.com/metacubex/mihomo/tunnel/statistic"
 	"sync"
+	"sync/atomic"
+
+	yamlv3 "go.yaml.in/yaml/v3"
 )
 
 var (
-	isInit            = false
-	externalProviders = map[string]cp.Provider{}
-	logSubscriber     observable.Subscription[log.Event]
-	ageMutex          sync.Mutex
+	isInit              = false
+	externalProviders   = map[string]cp.Provider{}
+	logSubscriber       observable.Subscription[log.Event]
+	ageMutex            sync.Mutex
+	requestHistoryLock  sync.RWMutex
+	requestHistory      []*statistic.TrackerInfo
+	isStreamingRequests atomic.Bool
+	logHistoryLock      sync.RWMutex
+	logHistory          []logEntry
+	isStreamingLogs     atomic.Bool
 )
 
 func handleInitClash(paramsString string) bool {
@@ -53,6 +65,8 @@ func handleInitClash(paramsString string) bool {
 	if !isInit {
 		constant.SetHomeDir(params.HomeDir)
 		isInit = true
+		ensureLogSubscriber()
+		initPermissionGuard(params.HomeDir)
 	}
 	return isInit
 }
@@ -81,6 +95,7 @@ func handleGetIsInit() bool {
 func handleForceGc(forceFreeOSMemory bool) {
 	go func() {
 		log.Infoln("[APP] Request force GC, forceFreeOSMemory=%t", forceFreeOSMemory)
+		tryUnloadGeoData()
 		runtime.GC()
 		if forceFreeOSMemory {
 			debug.FreeOSMemory()
@@ -91,13 +106,38 @@ func handleForceGc(forceFreeOSMemory bool) {
 func handleShutdown() bool {
 	stopListeners()
 	executor.Shutdown()
+	tryUnloadGeoData()
+	handleClearRequests()
+	handleClearLogs()
+	isStreamingRequests.Store(false)
+	isStreamingLogs.Store(false)
+	if logSubscriber != nil {
+		log.UnSubscribe(logSubscriber)
+		logSubscriber = nil
+	}
 	runtime.GC()
 	debug.FreeOSMemory()
 	isInit = false
 	return true
 }
 
+var shortIDRegexp = regexp.MustCompile(`(?m)(short-id\s*:\s*)([0-9a-fA-F]+)(\s*(?:$|[,\s#\}]))`)
+
+func patchYamlShortID(data []byte) []byte {
+	return shortIDRegexp.ReplaceAll(data, []byte(`${1}"${2}"${3}`))
+}
+
 func handleValidateConfig(params *ValidateConfigParams) string {
+	if params.Setup != nil {
+		prepared, err := prepareSetup(params.Setup)
+		if err != nil {
+			return err.Error()
+		}
+		if constant.DefaultTestURL == params.Setup.TestURL {
+			storePreparedSetup(prepared)
+		}
+		return ""
+	}
 	ageMutex.Lock()
 	defer ageMutex.Unlock()
 
@@ -106,7 +146,8 @@ func handleValidateConfig(params *ValidateConfigParams) string {
 		defer age.SetGlobalSecretKeys()
 	}
 
-	_, err := config.Parse([]byte(params.Data))
+	data := patchYamlShortID([]byte(params.Data))
+	_, err := config.Parse(data)
 	if err != nil {
 		return err.Error()
 	}
@@ -124,13 +165,131 @@ func handleDecryptAgeConfig(params *DecryptAgeConfigParams) string {
 	return string(decrypted)
 }
 
-func handleGetProxies() map[string]constant.Proxy {
+type proxiesPayload struct {
+	Names  []string                   `json:"names"`
+	Types  []string                   `json:"types"`
+	Groups map[string]json.RawMessage `json:"groups"`
+}
+
+type groupPayload struct {
+	Name    string  `json:"name"`
+	Type    string  `json:"type"`
+	Now     *string `json:"now,omitempty"`
+	TestUrl *string `json:"testUrl,omitempty"`
+	Hidden  bool    `json:"hidden"`
+	Icon    string  `json:"icon"`
+	All     []any   `json:"all"`
+}
+
+type groupShape struct {
+	testUrl *string
+	hasNow  bool
+}
+
+var (
+	groupShapeLock sync.Mutex
+	groupShapes    = map[*adapter.Proxy]groupShape{}
+)
+
+func resetGroupShapes() {
+	groupShapeLock.Lock()
+	groupShapes = map[*adapter.Proxy]groupShape{}
+	groupShapeLock.Unlock()
+}
+
+func groupShapeOf(outbound *adapter.Proxy) (groupShape, error) {
+	groupShapeLock.Lock()
+	defer groupShapeLock.Unlock()
+	if shape, exist := groupShapes[outbound]; exist {
+		return shape, nil
+	}
+	inner, err := outbound.ProxyAdapter.MarshalJSON()
+	if err != nil {
+		return groupShape{}, err
+	}
+	fields := struct {
+		TestUrl *string `json:"testUrl"`
+		Now     *string `json:"now"`
+	}{}
+	if err := json.Unmarshal(inner, &fields); err != nil {
+		return groupShape{}, err
+	}
+	shape := groupShape{testUrl: fields.TestUrl, hasNow: fields.Now != nil}
+	groupShapes[outbound] = shape
+	return shape, nil
+}
+
+func marshalGroup(outbound *adapter.Proxy, group outboundgroup.ProxyGroup, indexes map[string]int) (json.RawMessage, error) {
+	shape, err := groupShapeOf(outbound)
+	if err != nil {
+		return nil, err
+	}
+	members := group.Proxies()
+	payload := groupPayload{
+		Name:    outbound.Name(),
+		Type:    outbound.Type().String(),
+		TestUrl: shape.testUrl,
+		Hidden:  group.Hidden(),
+		Icon:    group.Icon(),
+		All:     make([]any, len(members)),
+	}
+	if shape.hasNow {
+		now := group.Now()
+		payload.Now = &now
+	}
+	for i, member := range members {
+		name := member.Name()
+		if index, exist := indexes[name]; exist {
+			payload.All[i] = index
+		} else {
+			payload.All[i] = name
+		}
+	}
+	return json.Marshal(payload)
+}
+
+func marshalProxies(proxies map[string]constant.Proxy) ([]byte, error) {
+	payload := proxiesPayload{
+		Names:  make([]string, 0, len(proxies)),
+		Types:  make([]string, 0, len(proxies)),
+		Groups: map[string]json.RawMessage{},
+	}
+	indexes := make(map[string]int, len(proxies))
+	for name, proxy := range proxies {
+		indexes[name] = len(payload.Names)
+		payload.Names = append(payload.Names, name)
+		payload.Types = append(payload.Types, proxy.Type().String())
+	}
+	for name, proxy := range proxies {
+		outbound, ok := proxy.(*adapter.Proxy)
+		if !ok {
+			continue
+		}
+		group, isGroup := outbound.ProxyAdapter.(outboundgroup.ProxyGroup)
+		if !isGroup {
+			continue
+		}
+		data, err := marshalGroup(outbound, group, indexes)
+		if err != nil {
+			return nil, err
+		}
+		payload.Groups[name] = data
+	}
+	return json.Marshal(payload)
+}
+
+func handleGetProxies() string {
 	runLock.Lock()
 	defer runLock.Unlock()
 	if !isInit {
-		return make(map[string]constant.Proxy)
+		return ""
 	}
-	return tunnel.Proxies()
+	bytes, err := marshalProxies(tunnel.Proxies())
+	if err != nil {
+		log.Errorln("[APP] marshal proxies error: %v", err)
+		return ""
+	}
+	return string(bytes)
 }
 
 func handleChangeProxy(data string, fn func(string string)) {
@@ -171,7 +330,6 @@ func handleChangeProxy(data string, fn func(string string)) {
 		}
 
 		fn("")
-		return
 	}()
 }
 
@@ -296,10 +454,7 @@ func handleCloseConnections() bool {
 
 func closeConnections() {
 	statistic.DefaultManager.Range(func(c statistic.Tracker) bool {
-		err := c.Close()
-		if err != nil {
-			return false
-		}
+		_ = c.Close()
 		return true
 	})
 }
@@ -487,10 +642,25 @@ func marshalInlineProviderContent(rawConfig *config.RawConfig, providerName stri
 	return yaml.Marshal(map[string]any{"proxies": payload})
 }
 
-func handleStartLog() {
+const maxLogHistory = 512
+
+type logEntry struct {
+	log.Event
+	Time int64 `json:"time"`
+}
+
+func recordLogHistory(entry logEntry) {
+	logHistoryLock.Lock()
+	defer logHistoryLock.Unlock()
+	if len(logHistory) >= maxLogHistory {
+		logHistory = logHistory[1:]
+	}
+	logHistory = append(logHistory, entry)
+}
+
+func ensureLogSubscriber() {
 	if logSubscriber != nil {
-		log.UnSubscribe(logSubscriber)
-		logSubscriber = nil
+		return
 	}
 	logSubscriber = log.Subscribe()
 	go func() {
@@ -498,20 +668,49 @@ func handleStartLog() {
 			if logData.LogLevel < log.Level() {
 				continue
 			}
+			entry := logEntry{Event: logData, Time: time.Now().UnixMilli()}
+			recordLogHistory(entry)
+			if !isStreamingLogs.Load() {
+				if logData.LogLevel != log.ERROR {
+					continue
+				}
+			}
 			message := &Message{
 				Type: LogMessage,
-				Data: logData,
+				Data: entry,
 			}
 			sendMessage(*message)
 		}
 	}()
 }
 
+func handleStartLog() {
+	ensureLogSubscriber()
+	isStreamingLogs.Store(true)
+}
+
 func handleStopLog() {
-	if logSubscriber != nil {
-		log.UnSubscribe(logSubscriber)
-		logSubscriber = nil
+	isStreamingLogs.Store(false)
+}
+
+func handleGetLogs() string {
+	logHistoryLock.RLock()
+	defer logHistoryLock.RUnlock()
+	if len(logHistory) == 0 {
+		return "[]"
 	}
+	data, err := json.Marshal(logHistory)
+	if err != nil {
+		return "[]"
+	}
+	return string(data)
+}
+
+func handleClearLogs() bool {
+	logHistoryLock.Lock()
+	defer logHistoryLock.Unlock()
+	logHistory = nil
+	return true
 }
 
 func handleGetCountryCode(ip string, fn func(value string)) {
@@ -529,7 +728,106 @@ func handleGetCountryCode(ip string, fn func(value string)) {
 
 func handleGetMemory(fn func(value string)) {
 	go func() {
-		fn(strconv.FormatUint(statistic.DefaultManager.Memory(), 10))
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		var retainedIdle uint64
+		if m.HeapIdle > m.HeapReleased {
+			retainedIdle = m.HeapIdle - m.HeapReleased
+		}
+		mem := m.HeapInuse + retainedIdle + m.StackInuse
+		fn(strconv.FormatUint(mem, 10))
+	}()
+}
+
+func handleGetCoreStatus(fn func(value string)) {
+	go func() {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		var retainedIdle uint64
+		if m.HeapIdle > m.HeapReleased {
+			retainedIdle = m.HeapIdle - m.HeapReleased
+		}
+		inUse := m.HeapInuse + m.StackInuse
+		physical := inUse + retainedIdle
+
+		var proxyGroupsCount int
+		proxyNames := make(map[string]struct{})
+		for _, p := range tunnel.Proxies() {
+			if p == nil {
+				continue
+			}
+			if _, ok := p.Adapter().(outboundgroup.ProxyGroup); ok {
+				proxyGroupsCount++
+				continue
+			}
+			switch p.Type() {
+			case constant.Direct, constant.Reject, constant.RejectDrop, constant.Compatible, constant.Pass, constant.PassRule, constant.Rematch, constant.Dns:
+				continue
+			default:
+				proxyNames[p.Name()] = struct{}{}
+			}
+		}
+
+		for name, pr := range tunnel.Providers() {
+			if pr == nil || name == "default" || pr.VehicleType() == cp.Compatible {
+				continue
+			}
+			for _, p := range pr.Proxies() {
+				if p != nil {
+					proxyNames[p.Name()] = struct{}{}
+				}
+			}
+		}
+
+		var ruleProvidersCount int
+		var proxyProvidersCount int
+		if currentRawConfig != nil {
+			ruleProvidersCount = len(currentRawConfig.RuleProvider)
+			proxyProvidersCount = len(currentRawConfig.ProxyProvider)
+		} else {
+			for name, pr := range tunnel.Providers() {
+				if pr == nil || name == "default" || pr.VehicleType() == cp.Compatible {
+					continue
+				}
+				proxyProvidersCount++
+			}
+			ruleProvidersCount = len(tunnel.RuleProviders())
+		}
+
+		hasMMDB, hasSite, hasASN := checkActiveGeoUsage()
+
+		var geodatas []string
+		if hasMMDB {
+			geodatas = append(geodatas, "MMDB")
+		}
+		if hasSite {
+			geodatas = append(geodatas, "Site")
+		}
+		if hasASN {
+			geodatas = append(geodatas, "ASN")
+		}
+
+		geodataUse := "None"
+		if len(geodatas) > 0 {
+			geodataUse = strings.Join(geodatas, ", ")
+		}
+
+		status := map[string]any{
+			"physical":        physical,
+			"in-use":          inUse,
+			"reclaimable":     retainedIdle,
+			"goroutines":      runtime.NumGoroutine(),
+			"heap-objects":    m.HeapObjects,
+			"last-gc":         m.LastGC / 1000000,
+			"rules":           len(tunnel.Rules()),
+			"proxies":         len(proxyNames),
+			"proxy-groups":    proxyGroupsCount,
+			"rule-providers":  ruleProvidersCount,
+			"proxy-providers": proxyProvidersCount,
+			"geodata-use":     geodataUse,
+		}
+		bytes, _ := json.Marshal(status)
+		fn(string(bytes))
 	}()
 }
 
@@ -545,23 +843,232 @@ func handleSetState(params string) {
 }
 
 func handleGetConfig(params *GetConfigParams) (*config.RawConfig, error) {
+	rawCfg, err := readProfile(params.Path, params.AgeSecretKey)
+	if err != nil || len(params.DisabledGroups) == 0 {
+		return rawCfg, err
+	}
+	disabled := make(map[string]bool, len(params.DisabledGroups))
+	for _, name := range params.DisabledGroups {
+		disabled[name] = true
+	}
+	rawCfg.ProxyGroup = disableGroups(rawCfg.ProxyGroup, disabled)
+	return rawCfg, nil
+}
+
+func handleExportConfig(params *ExportConfigParams) error {
+	rawCfg, err := readProfile(params.Path, params.AgeSecretKey)
+	if err != nil {
+		return err
+	}
+	bytes, err := json.Marshal(rawCfg)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(params.Output, bytes, 0o600); err != nil {
+		return err
+	}
+	_ = os.Chown(params.Output, os.Getuid(), os.Getgid())
+	return nil
+}
+
+func readProfile(path string, ageSecretKey string) (*config.RawConfig, error) {
+	bytes, err := readFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return parseProfile(bytes, ageSecretKey)
+}
+
+func parseProfile(bytes []byte, ageSecretKey string) (*config.RawConfig, error) {
 	ageMutex.Lock()
 	defer ageMutex.Unlock()
 
-	if params.AgeSecretKey != "" {
-		age.SetGlobalSecretKeys(params.AgeSecretKey)
+	if ageSecretKey != "" {
+		age.SetGlobalSecretKeys(ageSecretKey)
 		defer age.SetGlobalSecretKeys()
 	}
+	return config.UnmarshalRawConfig(patchYamlShortID(bytes))
+}
 
-	bytes, err := readFile(params.Path)
+func loadPatchedConfig(params *SetupParams) (*config.RawConfig, string, error) {
+	var rawCfg *config.RawConfig
+	var err error
+	if params.ScriptedConfig != "" {
+		defer os.Remove(params.ScriptedConfig)
+		var bytes []byte
+		bytes, err = readFile(params.ScriptedConfig)
+		if err != nil {
+			return nil, "", err
+		}
+		rawCfg, err = decodeScriptedConfig(bytes)
+	} else {
+		rawCfg, err = readProfile(params.ProfilePath, params.AgeSecretKey)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	if params.Patch == nil {
+		return rawCfg, "", nil
+	}
+	global, err := applyPatch(rawCfg, params.Patch)
+	if err != nil {
+		return nil, "", err
+	}
+	return rawCfg, global, nil
+}
+
+func decodeScriptedConfig(data []byte) (*config.RawConfig, error) {
+	rawCfg := config.DefaultRawConfig()
+	scripted := struct {
+		*config.RawConfig
+		Rules []string `json:"rules"`
+	}{RawConfig: rawCfg}
+	if err := json.Unmarshal(data, &scripted); err != nil {
+		return config.UnmarshalRawConfig(data)
+	}
+	if scripted.Rules != nil {
+		rawCfg.Rule = scripted.Rules
+	}
+	for _, item := range rawCfg.Proxy {
+		normalizeJsonNumbers(item)
+	}
+	for _, item := range rawCfg.ProxyGroup {
+		normalizeJsonNumbers(item)
+	}
+	for _, item := range rawCfg.Listeners {
+		normalizeJsonNumbers(item)
+	}
+	for _, item := range rawCfg.ProxyProvider {
+		normalizeJsonNumbers(item)
+	}
+	for _, item := range rawCfg.RuleProvider {
+		normalizeJsonNumbers(item)
+	}
+	normalizeJsonNumbers(rawCfg.Hosts)
+	return rawCfg, nil
+}
+
+func normalizeJsonNumbers(value any) any {
+	switch typed := value.(type) {
+	case float64:
+		if typed == math.Trunc(typed) && math.Abs(typed) < 1<<53 {
+			return int(typed)
+		}
+	case map[string]any:
+		for key, item := range typed {
+			typed[key] = normalizeJsonNumbers(item)
+		}
+	case []any:
+		for index, item := range typed {
+			typed[index] = normalizeJsonNumbers(item)
+		}
+	}
+	return value
+}
+
+func handleGetRuntimeConfig(params *SetupParams) (string, error) {
+	scripted := params.ScriptedConfig != ""
+	path := params.ProfilePath
+	if scripted {
+		path = params.ScriptedConfig
+	}
+	source, err := readFile(path)
+	if err != nil {
+		return "", err
+	}
+	var before *config.RawConfig
+	if scripted {
+		before, err = decodeScriptedConfig(source)
+	} else {
+		source = patchYamlShortID(source)
+		before, err = parseProfile(source, params.AgeSecretKey)
+	}
+	if err != nil {
+		return "", err
+	}
+	after, _, err := loadPatchedConfig(params)
+	if err != nil {
+		return "", err
+	}
+	var forced map[string]json.RawMessage
+	if params.Patch != nil && hasPatchValue(params.Patch.General) {
+		_ = json.Unmarshal(params.Patch.General, &forced)
+	}
+	root, err := buildRuntimeConfigNode(source, before, after, forced)
+	if err != nil {
+		return "", err
+	}
+	out, err := marshalYamlNode(root)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func walkYamlScalars(node *yamlv3.Node, visit func(*yamlv3.Node)) {
+	if node.Kind == yamlv3.ScalarNode {
+		visit(node)
+	}
+	for _, child := range node.Content {
+		walkYamlScalars(child, visit)
+	}
+}
+
+func encodeYamlNode(root *yamlv3.Node) ([]byte, error) {
+	var out strings.Builder
+	encoder := yamlv3.NewEncoder(&out)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(root); err != nil {
+		return nil, err
+	}
+	if err := encoder.Close(); err != nil {
+		return nil, err
+	}
+	return []byte(out.String()), nil
+}
+
+func marshalYamlNode(root *yamlv3.Node) ([]byte, error) {
+	const privateUseStart, privateUseEnd = rune(0xE000), rune(0xF8FF)
+	used := map[rune]bool{}
+	placeholders := map[rune]rune{}
+	walkYamlScalars(root, func(node *yamlv3.Node) {
+		for _, char := range node.Value {
+			if char >= privateUseStart && char <= privateUseEnd {
+				used[char] = true
+			} else if char > 0xFFFF {
+				placeholders[char] = 0
+			}
+		}
+	})
+	if len(placeholders) == 0 {
+		return encodeYamlNode(root)
+	}
+	next := privateUseStart
+	restore := make([]string, 0, len(placeholders)*2)
+	for char := range placeholders {
+		for used[next] {
+			next++
+		}
+		if next > privateUseEnd {
+			return encodeYamlNode(root)
+		}
+		placeholders[char] = next
+		restore = append(restore, string(next), string(char))
+		next++
+	}
+	walkYamlScalars(root, func(node *yamlv3.Node) {
+		node.Value = strings.Map(func(char rune) rune {
+			if placeholder, ok := placeholders[char]; ok {
+				return placeholder
+			}
+			return char
+		}, node.Value)
+	})
+	out, err := encodeYamlNode(root)
 	if err != nil {
 		return nil, err
 	}
-	prof, err := config.UnmarshalRawConfig(bytes)
-	if err != nil {
-		return nil, err
-	}
-	return prof, nil
+	return []byte(strings.NewReplacer(restore...).Replace(string(out))), nil
 }
 
 func handleFlushFakeIP() bool {
@@ -596,28 +1103,46 @@ func handleUpdateConfig(bytes []byte) string {
 	return ""
 }
 
-func handleSetupConfig(bytes []byte) string {
+func handleSetupConfig(bytes []byte) *SetupResult {
 	var params = defaultSetupParams()
 	err := UnmarshalJson(bytes, params)
 	if err != nil {
 		log.Errorln("unmarshalRawConfig error %v", err)
-		_ = setupConfig(defaultSetupParams())
-		return err.Error()
+		return &SetupResult{Message: err.Error()}
 	}
-	err = setupConfig(params)
+	clearSuspendedHealthChecks()
+	clearSuspendedWireGuard()
+	suspendModeLock.Lock()
+	currentSuspendMode = 0
+	suspendModeLock.Unlock()
+	global, err := setupConfig(params)
 	if err != nil {
-		return err.Error()
+		return &SetupResult{Message: err.Error()}
 	}
-	return ""
+	return &SetupResult{Global: global}
 }
 
-func handleSuspend(suspended bool) bool {
+var (
+	currentSuspendMode = 0
+	suspendModeLock    sync.Mutex
+)
+
+func handleSuspend(mode int) bool {
 	if !isInit {
 		return false
 	}
-	if suspended {
+	suspendModeLock.Lock()
+	defer suspendModeLock.Unlock()
+
+	switch mode {
+	case 1:
+		if currentSuspendMode == 1 {
+			return true
+		}
 		log.Infoln("[APP] Suspend mode enabled")
 		tunnel.OnSuspend()
+		pauseHealthChecks()
+		pauseWireGuard()
 
 		mihomoNtp.ReCreateNTPService("", 0, "", nil, false)
 
@@ -627,23 +1152,49 @@ func handleSuspend(suspended bool) bool {
 		})
 
 		runtime.GC()
-	} else {
-		log.Infoln("[APP] Resume from suspend")
-		tunnel.OnRunning()
+		currentSuspendMode = 1
 
-		runLock.Lock()
-		cfg := currentConfig
-		runLock.Unlock()
-		if cfg != nil && cfg.NTP != nil && cfg.NTP.Enable {
-			c := cfg.NTP
-			mihomoNtp.ReCreateNTPService(
-				net.JoinHostPort(c.Server, strconv.Itoa(c.Port)),
-				time.Duration(c.Interval),
-				c.DialerProxy,
-				tunnel.Tunnel,
-				c.WriteToSystem,
-			)
+	case 2:
+		if currentSuspendMode == 1 || currentSuspendMode == 2 {
+			return true
 		}
+		log.Infoln("[APP] Doze suspend mode enabled")
+		pauseHealthChecks()
+		runtime.GC()
+		currentSuspendMode = 2
+
+	case 0:
+		if currentSuspendMode == 0 {
+			return true
+		}
+		log.Infoln("[APP] Resume from suspend")
+		prevMode := currentSuspendMode
+		currentSuspendMode = 0
+
+		if prevMode == 1 {
+			tunnel.OnRunning()
+			resumeHealthChecks()
+			resumeWireGuard()
+
+			runLock.Lock()
+			cfg := currentConfig
+			runLock.Unlock()
+			if cfg != nil && cfg.NTP != nil && cfg.NTP.Enable {
+				c := cfg.NTP
+				mihomoNtp.ReCreateNTPService(
+					net.JoinHostPort(c.Server, strconv.Itoa(c.Port)),
+					time.Duration(c.Interval),
+					c.DialerProxy,
+					tunnel.Tunnel,
+					c.WriteToSystem,
+				)
+			}
+		} else if prevMode == 2 {
+			resumeHealthChecks()
+		}
+
+	default:
+		return false
 	}
 	return true
 }
@@ -665,9 +1216,14 @@ func init() {
 		})
 	}
 	statistic.DefaultRequestNotify = func(c statistic.Tracker) {
+		info := c.Info()
+		recordRequestHistory(info)
+		if !isStreamingRequests.Load() {
+			return
+		}
 		sendMessage(Message{
 			Type: RequestMessage,
-			Data: c.Info(),
+			Data: info,
 		})
 	}
 	executor.DefaultProviderLoadedHook = func(providerName string) {
@@ -677,3 +1233,45 @@ func init() {
 		})
 	}
 }
+
+const maxRequestHistory = 256
+
+func recordRequestHistory(info *statistic.TrackerInfo) {
+	requestHistoryLock.Lock()
+	defer requestHistoryLock.Unlock()
+	if len(requestHistory) >= maxRequestHistory {
+		requestHistory = requestHistory[1:]
+	}
+	requestHistory = append(requestHistory, info)
+}
+
+func handleGetRequests() string {
+	requestHistoryLock.RLock()
+	defer requestHistoryLock.RUnlock()
+	if len(requestHistory) == 0 {
+		return "[]"
+	}
+	data, err := json.Marshal(requestHistory)
+	if err != nil {
+		return "[]"
+	}
+	return string(data)
+}
+
+func handleStartTrackRequests() bool {
+	isStreamingRequests.Store(true)
+	return true
+}
+
+func handleStopTrackRequests() bool {
+	isStreamingRequests.Store(false)
+	return true
+}
+
+func handleClearRequests() bool {
+	requestHistoryLock.Lock()
+	defer requestHistoryLock.Unlock()
+	requestHistory = nil
+	return true
+}
+

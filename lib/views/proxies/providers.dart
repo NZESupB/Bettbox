@@ -10,70 +10,96 @@ import 'package:kitony_box/pages/editor.dart';
 import 'package:kitony_box/providers/app.dart';
 import 'package:kitony_box/state.dart';
 import 'package:kitony_box/widgets/widgets.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef UpdatingMap = Map<String, bool>;
 
-class ProvidersView extends ConsumerStatefulWidget {
+Future<void> updateExternalProviders(
+  WidgetRef ref,
+  BuildContext context, {
+  String? type,
+}) async {
+  final allProviders = ref.read(providersProvider);
+  final providers = type == null
+      ? allProviders
+      : allProviders.where((p) => p.type == type).toList();
+
+  if (providers.isEmpty) return;
+
+  final appController = globalState.appController;
+  final messages = [];
+  final updateProviders = providers.map<Future>((provider) async {
+    appController.setProvider(provider.copyWith(isUpdating: true));
+    final message = await clashCore.updateExternalProvider(
+      providerName: provider.name,
+    );
+    if (message.isNotEmpty) {
+      messages.add('${provider.name}: $message \n');
+    }
+    final updated = await clashCore.getExternalProvider(provider.name);
+    appController.setProvider(updated);
+  });
+  final titleMedium = context.textTheme.titleMedium;
+  await Future.wait(updateProviders);
+  globalState.appController.updateGroupsDebounce();
+  final hasRuleProvider = providers.any((p) => p.type == 'Rule');
+  if (hasRuleProvider) {
+    globalState.appController.applyProfileDebounce(silence: true);
+  }
+  if (messages.isNotEmpty) {
+    globalState.showMessage(
+      title: appLocalizations.tip,
+      message: TextSpan(
+        children: [
+          for (final message in messages)
+            TextSpan(text: message, style: titleMedium),
+        ],
+      ),
+      cancelable: false,
+    );
+  }
+}
+
+class ProvidersView extends ConsumerWidget {
   final SheetType type;
 
   const ProvidersView({super.key, required this.type});
 
   @override
-  ConsumerState<ProvidersView> createState() => _ProvidersViewState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RepaintBoundary(
+      child: AdaptiveSheetScaffold(
+        actions: [
+          IconButton(
+            onPressed: () => updateExternalProviders(ref, context),
+            tooltip: appLocalizations.update,
+            icon: const Icon(Icons.sync),
+          ),
+        ],
+        type: type,
+        body: const ProvidersBody(),
+        title: appLocalizations.providers,
+      ),
+    );
+  }
 }
 
-class _ProvidersViewState extends ConsumerState<ProvidersView> {
+class ProvidersBody extends ConsumerStatefulWidget {
+  const ProvidersBody({super.key});
+
+  @override
+  ConsumerState<ProvidersBody> createState() => _ProvidersBodyState();
+}
+
+class _ProvidersBodyState extends ConsumerState<ProvidersBody> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      globalState.appController.updateProviders();
+      if (!mounted) return;
+      context.afterRouteTransition(globalState.appController.updateProviders);
     });
-  }
-
-  Future<void> _updateProviders({String? type}) async {
-    final allProviders = ref.read(providersProvider);
-    final providers = type == null
-        ? allProviders
-        : allProviders.where((p) => p.type == type).toList();
-
-    if (providers.isEmpty) return;
-
-    final providersNotifier = ref.read(providersProvider.notifier);
-    final messages = [];
-    final updateProviders = providers.map<Future>((provider) async {
-      providersNotifier.setProvider(provider.copyWith(isUpdating: true));
-      final message = await clashCore.updateExternalProvider(
-        providerName: provider.name,
-      );
-      if (message.isNotEmpty) {
-        messages.add('${provider.name}: $message \n');
-      }
-      providersNotifier.setProvider(
-        await clashCore.getExternalProvider(provider.name),
-      );
-    });
-    final titleMedium = context.textTheme.titleMedium;
-    await Future.wait(updateProviders);
-    globalState.appController.updateGroupsDebounce();
-    final hasRuleProvider = providers.any((p) => p.type == 'Rule');
-    if (hasRuleProvider) {
-      globalState.appController.applyProfileDebounce(silence: true);
-    }
-    if (messages.isNotEmpty) {
-      globalState.showMessage(
-        title: appLocalizations.tip,
-        message: TextSpan(
-          children: [
-            for (final message in messages)
-              TextSpan(text: message, style: titleMedium),
-          ],
-        ),
-        cancelable: false,
-      );
-    }
   }
 
   @override
@@ -97,85 +123,90 @@ class _ProvidersViewState extends ConsumerState<ProvidersView> {
             (
               title: appLocalizations.proxyProviders,
               providers: proxyProviders,
-              onSync: () => _updateProviders(type: 'Proxy'),
+              onSync: () =>
+                  updateExternalProviders(ref, context, type: 'Proxy'),
             ),
           if (ruleProviders.isNotEmpty)
             (
               title: appLocalizations.ruleProviders,
               providers: ruleProviders,
-              onSync: () => _updateProviders(type: 'Rule'),
+              onSync: () => updateExternalProviders(ref, context, type: 'Rule'),
             ),
         ];
 
-    return RepaintBoundary(
-      child: AdaptiveSheetScaffold(
-        actions: [
-          IconButton(
-            onPressed: _updateProviders,
-            tooltip: appLocalizations.update,
-            icon: const Icon(Icons.sync),
-          ),
-        ],
-        type: widget.type,
-        body: Builder(
-          builder: (context) {
-            final bottomPadding = MediaQuery.of(context).padding.bottom;
-            final itemCount = sections.fold<int>(
-              0,
-              (sum, section) => sum + 1 + section.providers.length,
-            );
-            return ListView.builder(
-              padding: EdgeInsets.only(bottom: 24 + bottomPadding, top: 12),
-              itemCount: itemCount,
-              itemBuilder: (context, index) {
-                var current = 0;
-                for (final section in sections) {
-                  if (index == current) {
-                    return ListHeader(
-                      title: section.title,
-                      padding: current == 0
-                          ? const EdgeInsets.only(
-                              left: 16,
-                              right: 8,
-                              top: 4,
-                              bottom: 8,
-                            )
-                          : null,
-                      actions: [
-                        IconButton(
-                          onPressed: section.onSync,
-                          tooltip: appLocalizations.update,
-                          icon: const Icon(Icons.sync),
-                          iconSize: 20,
-                          splashRadius: 20,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
-                    );
-                  }
-                  current++;
-                  if (index < current + section.providers.length) {
-                    final providerIndex = index - current;
-                    final provider = section.providers[providerIndex];
-                    return ContinuousListItem(
-                      index: providerIndex,
-                      count: section.providers.length,
-                      child: ProviderItem(
-                        key: ValueKey(provider.name),
-                        provider: provider,
-                      ),
-                    );
-                  }
-                  current += section.providers.length;
-                }
-                return const SizedBox.shrink();
-              },
+    return Builder(
+      builder: (context) {
+        final bottomPadding = MediaQuery.of(context).padding.bottom;
+        final itemCount = sections.fold<int>(
+          0,
+          (sum, section) => sum + 1 + section.providers.length,
+        );
+        return ScrollEdgeRise(
+          builder: (_, rise) {
+            final slivers = [
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  bottom: 24 + bottomPadding,
+                  top: 8 + rise,
+                ),
+                sliver: SliverList.builder(
+                  itemCount: itemCount,
+                  itemBuilder: (context, index) {
+                    var current = 0;
+                    for (final section in sections) {
+                      if (index == current) {
+                        return ListHeader(
+                          title: section.title,
+                          padding: current == 0
+                              ? const EdgeInsets.only(
+                                  left: 16,
+                                  right: 8,
+                                  top: 4,
+                                  bottom: 8,
+                                )
+                              : null,
+                          actions: [
+                            IconButton(
+                              onPressed: section.onSync,
+                              tooltip: appLocalizations.update,
+                              icon: const Icon(Icons.sync),
+                              iconSize: 20,
+                              splashRadius: 20,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        );
+                      }
+                      current++;
+                      if (index < current + section.providers.length) {
+                        final providerIndex = index - current;
+                        final provider = section.providers[providerIndex];
+                        return ContinuousListItem(
+                          index: providerIndex,
+                          count: section.providers.length,
+                          child: ProviderItem(
+                            key: ValueKey(provider.name),
+                            provider: provider,
+                          ),
+                        );
+                      }
+                      current += section.providers.length;
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ];
+            return RouteScrollCacheBuilder(
+              builder: (_, cacheExtent) => CustomScrollView(
+                scrollCacheExtent: cacheExtent,
+                slivers: slivers,
+              ),
             );
           },
-        ),
-        title: appLocalizations.providers,
-      ),
+        );
+      },
     );
   }
 }
@@ -207,8 +238,9 @@ class ProviderItem extends StatelessWidget {
   Future<void> _handleSideLoadProvider() async {
     await globalState.appController.safeRun<void>(() async {
       final platformFile = await picker.pickerFile();
-      final bytes = platformFile?.bytes;
-      if (bytes == null || provider.path == null) return;
+      if (platformFile == null || provider.path == null) return;
+      final bytes = await platformFile.readAsBytes();
+      if (bytes.isEmpty) return;
       final file = await File(provider.path!).create(recursive: true);
       await file.writeAsBytes(bytes);
       final providerName = provider.name;
@@ -261,32 +293,48 @@ class ProviderItem extends StatelessWidget {
     );
   }
 
+  Widget _buildTitleRow(BuildContext context) {
+    final subtitleText = provider.subscriptionInfo?.expireDesc;
+
+    return Row(
+      children: [
+        Flexible(
+          child: EmojiText(
+            provider.name,
+            style: context.textTheme.titleMedium,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (subtitleText != null && subtitleText.isNotEmpty) ...[
+          const SizedBox(width: 6),
+          Text('·', style: context.textTheme.labelMedium?.toLight),
+          const SizedBox(width: 6),
+          Text(
+            subtitleText,
+            style: context.textTheme.labelMedium?.toLight,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
   String _buildProviderDesc() {
     final updateTimeText = provider.updateAt.lastUpdateTimeDesc;
     final subInfo = provider.subscriptionInfo;
-    String infoText;
-    if (subInfo == null) {
-      infoText = updateTimeText;
-    } else {
-      final trafficText = _buildTrafficInfoText(subInfo);
-      final expireText = _getExpireText(subInfo);
-      infoText = trafficText == null
-          ? '$expireText - $updateTimeText'
-          : '$trafficText · $expireText - $updateTimeText';
-    }
+    final trafficText = _buildTrafficInfoText(subInfo);
     final count = provider.count;
-    return count == 0
-        ? infoText
-        : '$infoText · $count${appLocalizations.entries}';
-  }
+    final countText = count == 0 ? null : '$count${appLocalizations.entries}';
 
-  String _getExpireText(SubscriptionInfo subscriptionInfo) {
-    if (subscriptionInfo.expire == 0) {
-      return appLocalizations.infiniteTime;
-    }
-    return DateTime.fromMillisecondsSinceEpoch(
-      subscriptionInfo.expire * 1000,
-    ).show;
+    final parts = [
+      if (trafficText != null && trafficText.isNotEmpty) trafficText,
+      updateTimeText,
+      ?countText,
+    ];
+
+    return parts.join(' · ');
   }
 
   String? _buildTrafficInfoText(SubscriptionInfo? subscriptionInfo) {
@@ -311,7 +359,7 @@ class ProviderItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListItem(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      title: EmojiText(provider.name),
+      title: _buildTitleRow(context),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -343,7 +391,10 @@ class ProviderItem extends StatelessWidget {
                         width: 30,
                         child: const Padding(
                           padding: EdgeInsets.all(2),
-                          child: CircularProgressIndicator(),
+                          child: SyncedLoading(
+                            size: 26,
+                            child: CircularProgressIndicator(),
+                          ),
                         ),
                       )
                     : CommonChip(

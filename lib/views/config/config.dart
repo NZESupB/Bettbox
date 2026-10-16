@@ -11,7 +11,7 @@ import 'package:kitony_box/views/config/sniffer.dart';
 import 'package:kitony_box/views/config/tunnel.dart';
 import 'package:kitony_box/views/config/experimental.dart';
 import 'package:kitony_box/widgets/widgets.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ConfigView extends StatefulWidget {
@@ -57,10 +57,8 @@ class _ConfigViewState extends State<ConfigView> {
                     ref
                         .read(vpnSettingProvider.notifier)
                         .updateState(
-                          (state) => defaultVpnProps.copyWith(
-                            accessControl: state.accessControl,
-                            enable: state.enable,
-                            systemProxy: state.systemProxy,
+                          (state) => state.copyWith(
+                            allowBypass: defaultVpnProps.allowBypass,
                           ),
                         );
                     ref
@@ -172,7 +170,9 @@ class _ConfigViewState extends State<ConfigView> {
                 titleBuilder: (item) => Text(item.key),
                 subtitleBuilder: (item) => Text(item.value),
                 canDelete: (item) =>
-                    !(storeFix && item.key == 'services.googleapis.cn') &&
+                    !(system.isAndroid &&
+                        storeFix &&
+                        item.key == 'services.googleapis.cn') &&
                     !(networkFix && item.key == 'dns.msftncsi.com'),
                 onChange: (value) {
                   ref

@@ -3,6 +3,8 @@ package main
 import (
 	b "bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/metacubex/mihomo/adapter"
@@ -11,6 +13,8 @@ import (
 	"github.com/metacubex/mihomo/adapter/provider"
 	"github.com/metacubex/mihomo/common/batch"
 	"github.com/metacubex/mihomo/component/dialer"
+	"github.com/metacubex/mihomo/component/geodata"
+	"github.com/metacubex/mihomo/component/mmdb"
 	"github.com/metacubex/mihomo/component/resolver"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
@@ -19,12 +23,15 @@ import (
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/route"
 	"github.com/metacubex/mihomo/listener"
+	LC "github.com/metacubex/mihomo/listener/config"
 	"github.com/metacubex/mihomo/log"
 	rp "github.com/metacubex/mihomo/rules/provider"
 	"github.com/metacubex/mihomo/tunnel"
+	"go4.org/netipx"
 	"os"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 )
@@ -56,40 +63,37 @@ func getExternalProvidersRaw() map[string]cp.Provider {
 }
 
 func toExternalProvider(p cp.Provider) (*ExternalProvider, error) {
-	switch p.(type) {
+	switch p := p.(type) {
 	case *provider.ProxySetProvider:
-		psp := p.(*provider.ProxySetProvider)
 		return &ExternalProvider{
-			Name:             psp.Name(),
-			Type:             psp.Type().String(),
-			VehicleType:      psp.VehicleType().String(),
-			Count:            psp.Count(),
-			UpdateAt:         psp.UpdatedAt(),
-			Path:             psp.Vehicle().Path(),
-			SubscriptionInfo: psp.GetSubscriptionInfo(),
-			Proxies:          psp.Proxies(),
+			Name:             p.Name(),
+			Type:             p.Type().String(),
+			VehicleType:      p.VehicleType().String(),
+			Count:            p.Count(),
+			UpdateAt:         p.UpdatedAt(),
+			Path:             p.Vehicle().Path(),
+			SubscriptionInfo: p.GetSubscriptionInfo(),
+			Proxies:          p.Proxies(),
 		}, nil
 	case *provider.InlineProvider:
-		ip := p.(*provider.InlineProvider)
 		return &ExternalProvider{
-			Name:             ip.Name(),
-			Type:             ip.Type().String(),
-			VehicleType:      ip.VehicleType().String(),
-			Count:            ip.Count(),
+			Name:             p.Name(),
+			Type:             p.Type().String(),
+			VehicleType:      p.VehicleType().String(),
+			Count:            p.Count(),
 			UpdateAt:         time.Now(),
 			Path:             "",
 			SubscriptionInfo: nil,
-			Proxies:          ip.Proxies(),
+			Proxies:          p.Proxies(),
 		}, nil
 	case *rp.RuleSetProvider:
-		rsp := p.(*rp.RuleSetProvider)
 		return &ExternalProvider{
-			Name:        rsp.Name(),
-			Type:        rsp.Type().String(),
-			VehicleType: rsp.VehicleType().String(),
-			Count:       rsp.Count(),
-			UpdateAt:    rsp.UpdatedAt(),
-			Path:        rsp.Vehicle().Path(),
+			Name:        p.Name(),
+			Type:        p.Type().String(),
+			VehicleType: p.VehicleType().String(),
+			Count:       p.Count(),
+			UpdateAt:    p.UpdatedAt(),
+			Path:        p.Vehicle().Path(),
 		}, nil
 	default:
 		return nil, errors.New("not external provider")
@@ -97,23 +101,15 @@ func toExternalProvider(p cp.Provider) (*ExternalProvider, error) {
 }
 
 func sideUpdateExternalProvider(p cp.Provider, bytes []byte) error {
-	switch p.(type) {
+	switch p := p.(type) {
 	case *provider.ProxySetProvider:
-		psp := p.(*provider.ProxySetProvider)
-		_, _, err := psp.SideUpdate(bytes)
-		if err == nil {
-			return err
-		}
-		return nil
+		_, _, err := p.SideUpdate(bytes)
+		return err
 	case *provider.InlineProvider:
 		return nil
-	case rp.RuleSetProvider:
-		rsp := p.(*rp.RuleSetProvider)
-		_, _, err := rsp.SideUpdate(bytes)
-		if err == nil {
-			return err
-		}
-		return nil
+	case *rp.RuleSetProvider:
+		_, _, err := p.SideUpdate(bytes)
+		return err
 	default:
 		return errors.New("not external provider")
 	}
@@ -174,22 +170,13 @@ func patchSelectGroup(mapping map[string]string) {
 
 func defaultSetupParams() *SetupParams {
 	return &SetupParams{
-		Config:      config.DefaultRawConfig(),
 		TestURL:     "https://g.cn/generate_204",
 		SelectedMap: map[string]string{},
 	}
 }
 
 func readFile(path string) ([]byte, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, err
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, err
+	return os.ReadFile(path)
 }
 
 func updateConfig(params *UpdateParams) {
@@ -268,10 +255,14 @@ func updateConfig(params *UpdateParams) {
 	if params.Tun != nil {
 		general.Tun.Enable = params.Tun.Enable
 		general.Tun.AutoRoute = *params.Tun.AutoRoute
+		if params.Tun.AutoRedirect != nil {
+			general.Tun.AutoRedirect = *params.Tun.AutoRedirect
+		}
 		general.Tun.Device = *params.Tun.Device
 		general.Tun.RouteAddress = *params.Tun.RouteAddress
 		if params.Tun.RouteExcludeAddress != nil {
 			general.Tun.RouteExcludeAddress = *params.Tun.RouteExcludeAddress
+			syncTunRouteExcludeSet(&general.Tun)
 		}
 		if params.Tun.StrictRoute != nil {
 			general.Tun.StrictRoute = *params.Tun.StrictRoute
@@ -279,53 +270,288 @@ func updateConfig(params *UpdateParams) {
 		general.Tun.DNSHijack = *params.Tun.DNSHijack
 		general.Tun.Stack = *params.Tun.Stack
 		general.Tun.DisableICMPForwarding = *params.Tun.DisableICMPForwarding
+		if params.Tun.CongestionController != nil {
+			general.Tun.CongestionController = *params.Tun.CongestionController
+		}
 	}
 
 	updateListeners()
 }
 
-func setupConfig(params *SetupParams) error {
-	runLock.Lock()
-	defer runLock.Unlock()
+func syncTunRouteExcludeSet(tun *LC.Tun) {
+	sets := make([]string, 0, len(tun.RouteExcludeAddressSet))
+	for _, name := range tun.RouteExcludeAddressSet {
+		if name != tunRouteExcludeSet {
+			sets = append(sets, name)
+		}
+	}
+	tun.RouteExcludeAddressSet = sets
+	provider, exist := tunnel.RuleProviders()[tunRouteExcludeSet]
+	if !exist || !tun.AutoRedirect {
+		return
+	}
+	strategy, ok := provider.Strategy().(interface{ ToIpCidr() *netipx.IPSet })
+	if !ok {
+		return
+	}
+	current := strategy.ToIpCidr()
+	if current == nil {
+		return
+	}
+	var builder netipx.IPSetBuilder
+	for _, prefix := range tun.RouteExcludeAddress {
+		builder.AddPrefix(prefix)
+	}
+	next, err := builder.IPSet()
+	if err != nil || !next.Equal(current) {
+		return
+	}
+	tun.RouteExcludeAddressSet = append(sets, tunRouteExcludeSet)
+	tun.RouteExcludeAddress = nil
+}
 
-	if params.Config != nil && params.Config.ProxyGroup != nil {
-		for _, group := range params.Config.ProxyGroup {
-			if elm, ok := group["tolerance"]; ok {
-				switch v := elm.(type) {
-				case json.Number:
-					if i, err := v.Int64(); err == nil {
-						group["tolerance"] = int(i)
+var (
+	mmdbUnloaded bool
+	asnUnloaded  bool
+)
+
+func checkActiveGeoUsage() (hasMMDB, hasSite, hasASN bool) {
+	for _, r := range tunnel.Rules() {
+		if r == nil {
+			continue
+		}
+		switch r.RuleType() {
+		case constant.GEOIP, constant.SrcGEOIP:
+			hasMMDB = true
+		case constant.GEOSITE:
+			hasSite = true
+		case constant.IPASN, constant.SrcIPASN:
+			hasASN = true
+		case constant.AND, constant.OR, constant.NOT, constant.SubRules:
+			payload := strings.ToUpper(r.Payload())
+			if strings.Contains(payload, "(GEOIP,") || strings.Contains(payload, "(SRCGEOIP,") {
+				hasMMDB = true
+			}
+			if strings.Contains(payload, "(GEOSITE,") {
+				hasSite = true
+			}
+			if strings.Contains(payload, "(IPASN,") || strings.Contains(payload, "(SRCIPASN,") {
+				hasASN = true
+			}
+		}
+		if hasMMDB && hasSite && hasASN {
+			return
+		}
+	}
+
+	if currentRawConfig != nil {
+		if !hasSite && currentRawConfig.DNS.Enable && currentRawConfig.DNS.NameServerPolicy != nil {
+			for pair := currentRawConfig.DNS.NameServerPolicy.Oldest(); pair != nil; pair = pair.Next() {
+				if strings.HasPrefix(strings.ToLower(pair.Key), "geosite:") {
+					hasSite = true
+					break
+				}
+			}
+		}
+		if !hasMMDB && currentRawConfig.DNS.Enable && len(currentRawConfig.DNS.Fallback) > 0 && currentRawConfig.DNS.FallbackFilter.GeoIP {
+			hasMMDB = true
+		}
+		if !hasSite && currentRawConfig.DNS.Enable && len(currentRawConfig.DNS.Fallback) > 0 && len(currentRawConfig.DNS.FallbackFilter.GeoSite) > 0 {
+			hasSite = true
+		}
+		if !hasSite && currentRawConfig.Sniffer.Enable {
+			for _, d := range currentRawConfig.Sniffer.ForceDomain {
+				if strings.HasPrefix(strings.ToLower(d), "geosite:") {
+					hasSite = true
+					break
+				}
+			}
+			if !hasSite {
+				for _, d := range currentRawConfig.Sniffer.SkipDomain {
+					if strings.HasPrefix(strings.ToLower(d), "geosite:") {
+						hasSite = true
+						break
 					}
-				case float64:
-					group["tolerance"] = int(v)
-				case float32:
-					group["tolerance"] = int(v)
 				}
 			}
 		}
 	}
+	return
+}
 
-	constant.DefaultTestURL = params.TestURL
-	if params.OverrideTestUrl && params.Config != nil {
-		if params.Config.ProxyGroup != nil {
-			for _, group := range params.Config.ProxyGroup {
-				group["url"] = params.TestURL
+func tryUnloadGeoData() {
+	hasMMDB, _, hasASN := checkActiveGeoUsage()
+
+	if hasMMDB {
+		mmdbUnloaded = false
+	} else if !mmdbUnloaded && geodata.GeoIpEnable() {
+		if _, err := os.Stat(constant.Path.MMDB()); err == nil {
+			if reader := mmdb.IPInstance().Reader; reader != nil {
+				_ = reader.Close()
 			}
+			mmdb.ReloadIP()
+			mmdbUnloaded = true
 		}
 	}
 
-	var err error
-	currentConfig, err = config.ParseRawConfig(params.Config)
-	if err != nil {
-		return err
+	if hasASN {
+		asnUnloaded = false
+	} else if !asnUnloaded && geodata.ASNEnable() {
+		if _, err := os.Stat(constant.Path.ASN()); err == nil {
+			if reader := mmdb.ASNInstance().Reader; reader != nil {
+				_ = reader.Close()
+			}
+			mmdb.ReloadASN()
+			asnUnloaded = true
+		}
 	}
-	currentRawConfig = params.Config
+}
+
+type preparedSetup struct {
+	key    string
+	rawCfg *config.RawConfig
+	cfg    *config.Config
+	global string
+	expire time.Time
+	reused bool
+}
+
+var (
+	preparedSetupLock  sync.Mutex
+	lastPreparedSetup  *preparedSetup
+	preparedSetupLimit = time.Minute
+)
+
+func storePreparedSetup(prepared *preparedSetup) {
+	if prepared.key == "" {
+		return
+	}
+	prepared.expire = time.Now().Add(preparedSetupLimit)
+	preparedSetupLock.Lock()
+	lastPreparedSetup = prepared
+	preparedSetupLock.Unlock()
+}
+
+func takePreparedSetup(key string) *preparedSetup {
+	preparedSetupLock.Lock()
+	defer preparedSetupLock.Unlock()
+	prepared := lastPreparedSetup
+	lastPreparedSetup = nil
+	if prepared == nil || prepared.key != key || time.Now().After(prepared.expire) {
+		return nil
+	}
+	prepared.reused = true
+	return prepared
+}
+
+func setupKey(params *SetupParams, profile []byte) string {
+	patch, err := json.Marshal(params.Patch)
+	if err != nil {
+		return ""
+	}
+	hash := sha256.New()
+	hash.Write(profile)
+	hash.Write([]byte{0})
+	hash.Write(patch)
+	hash.Write([]byte{0})
+	hash.Write([]byte(params.AgeSecretKey))
+	hash.Write([]byte{0})
+	hash.Write([]byte(params.TestURL))
+	if params.OverrideTestUrl {
+		hash.Write([]byte{1})
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func loadSetupConfig(params *SetupParams) (*config.RawConfig, string, string, error) {
+	if params.ScriptedConfig != "" {
+		rawCfg, global, err := loadPatchedConfig(params)
+		return rawCfg, global, "", err
+	}
+	if params.ProfilePath == "" {
+		return nil, "", "", errors.New("profile path is empty")
+	}
+	buf, err := readFile(params.ProfilePath)
+	if err != nil {
+		return nil, "", "", err
+	}
+	key := setupKey(params, buf)
+	rawCfg, err := parseProfile(buf, params.AgeSecretKey)
+	if err != nil || params.Patch == nil {
+		return rawCfg, "", key, err
+	}
+	global, err := applyPatch(rawCfg, params.Patch)
+	return rawCfg, global, key, err
+}
+
+func prepareSetup(params *SetupParams) (*preparedSetup, error) {
+	if params.ScriptedConfig == "" && params.ProfilePath != "" {
+		buf, err := readFile(params.ProfilePath)
+		if err != nil {
+			return nil, err
+		}
+		if prepared := takePreparedSetup(setupKey(params, buf)); prepared != nil {
+			return prepared, nil
+		}
+	} else {
+		takePreparedSetup("")
+	}
+	rawCfg, global, key, err := loadSetupConfig(params)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.OverrideTestUrl && rawCfg.ProxyGroup != nil {
+		for _, group := range rawCfg.ProxyGroup {
+			group["url"] = params.TestURL
+		}
+	}
+
+	cfg, err := config.ParseRawConfig(rawCfg)
+	if err != nil {
+		return nil, err
+	}
+	return &preparedSetup{key: key, rawCfg: rawCfg, cfg: cfg, global: global}, nil
+}
+
+func setupConfig(params *SetupParams) (string, error) {
+	runLock.Lock()
+	defer runLock.Unlock()
+
+	constant.DefaultTestURL = params.TestURL
+
+	prepareStart := time.Now()
+	prepared, err := prepareSetup(params)
+	if err != nil {
+		return "", err
+	}
+	preloadBundledRuleSets(prepared.rawCfg)
+	applyStart := time.Now()
+	currentConfig = prepared.cfg
+	currentRawConfig = prepared.rawCfg
 	hub.ApplyConfig(currentConfig)
-	patchSelectGroup(params.SelectedMap)
+	resetGroupShapes()
+	selectedMap := params.SelectedMap
+	if prepared.global != "" {
+		selectedMap = make(map[string]string, len(params.SelectedMap)+1)
+		for name, proxy := range params.SelectedMap {
+			selectedMap[name] = proxy
+		}
+		selectedMap["GLOBAL"] = prepared.global
+	}
+	patchSelectGroup(selectedMap)
 	updateListeners()
+	tryUnloadGeoData()
 	runtime.GC()
 	debug.FreeOSMemory()
-	return nil
+	schedulePermissionSync()
+	log.Infoln(
+		"[APP] setup config: prepare %s (reused: %t), apply %s",
+		applyStart.Sub(prepareStart).Round(time.Millisecond),
+		prepared.reused,
+		time.Since(applyStart).Round(time.Millisecond),
+	)
+	return prepared.global, nil
 }
 
 func UnmarshalJson(data []byte, v any) error {

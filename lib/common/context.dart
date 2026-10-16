@@ -1,10 +1,25 @@
 import 'package:kitony_box/manager/message_manager.dart';
 import 'package:kitony_box/widgets/scaffold.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 extension BuildContextExtension on BuildContext {
   CommonScaffoldState? get commonScaffoldState {
     return findAncestorStateOfType<CommonScaffoldState>();
+  }
+
+  void afterRouteTransition(VoidCallback callback) {
+    final animation = ModalRoute.of(this)?.animation;
+    if (animation == null || animation.isCompleted) {
+      callback();
+      return;
+    }
+    void listener(AnimationStatus status) {
+      if (!status.isCompleted) return;
+      animation.removeStatusListener(listener);
+      callback();
+    }
+
+    animation.addStatusListener(listener);
   }
 
   Future<void>? showNotifier(

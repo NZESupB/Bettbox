@@ -248,13 +248,12 @@ class AppPackageMakerAppImage extends AppPackageMaker {
       final allReferencedSharedLibs = <String>{};
       for (final so in appSOLibs) {
         final referencedSharedLibs = await _getSharedDependencies(so.path).then(
-          (d) =>
-              d.difference(libFlutterGtkDeps)
-                ..removeWhere((lib) {
-                  final libName = path.basename(lib);
-                  return libName.contains('libflutter_linux_gtk.so') ||
-                      _excludedLibraryPatterns.any((p) => p.hasMatch(libName));
-                }),
+          (d) => d.difference(libFlutterGtkDeps)
+            ..removeWhere((lib) {
+              final libName = path.basename(lib);
+              return libName.contains('libflutter_linux_gtk.so') ||
+                  _excludedLibraryPatterns.any((p) => p.hasMatch(libName));
+            }),
         );
         allReferencedSharedLibs.addAll(referencedSharedLibs);
       }
@@ -302,6 +301,25 @@ class AppPackageMakerAppImage extends AppPackageMaker {
           );
         }),
       );
+
+      for (final entry in makeConfig.extraFiles.entries) {
+        final sourceFile = File(entry.key);
+        if (!sourceFile.existsSync()) {
+          throw MakeError('extra file ${entry.key} path wasn\'t found');
+        }
+
+        final destinationPath = path.join(
+          makeConfig.packagingDirectory.path,
+          '${makeConfig.appName}.AppDir',
+          entry.value,
+        );
+        final destinationDir = Directory(path.dirname(destinationPath));
+        if (!destinationDir.existsSync()) {
+          destinationDir.createSync(recursive: true);
+        }
+        await sourceFile.copy(destinationPath);
+        await $('chmod', ['644', destinationPath]);
+      }
 
       await $(
         'appimagetool',

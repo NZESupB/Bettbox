@@ -29,7 +29,10 @@ interface BaseServiceInterface {
     suspend fun startForeground()
 }
 
-suspend fun Service.createKitonyBoxNotificationBuilder(): NotificationCompat.Builder =
+suspend fun Service.createKitonyBoxNotificationBuilder(
+    isSuspended: Boolean = GlobalState.isSmartStopped,
+    isHighPriority: Boolean = GlobalState.isNotificationHighPriority
+): NotificationCompat.Builder =
     withContext(Dispatchers.IO) {
         val defaultComponent = ComponentName(packageName, "com.appshub.kitonybox.MainActivity")
         val lightComponent = ComponentName(packageName, "com.appshub.kitonybox.MainActivityLight")
@@ -66,7 +69,14 @@ suspend fun Service.createKitonyBoxNotificationBuilder(): NotificationCompat.Bui
             BitmapFactory.decodeResource(resources, largeIconRes)
         }.getOrNull()
 
-        NotificationCompat.Builder(this@createKitonyBoxNotificationBuilder, GlobalState.NOTIFICATION_CHANNEL).apply {
+        val channelId = when {
+            isSuspended -> GlobalState.NOTIFICATION_CHANNEL_SUSPENDED
+            isHighPriority -> GlobalState.NOTIFICATION_CHANNEL_HIGH
+            else -> GlobalState.NOTIFICATION_CHANNEL
+        }
+        val priority = if (isSuspended || isHighPriority) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW
+
+        NotificationCompat.Builder(this@createKitonyBoxNotificationBuilder, channelId).apply {
             setSmallIcon(R.drawable.ic)
             if (largeIconBitmap != null) {
                 setLargeIcon(largeIconBitmap)
@@ -80,24 +90,47 @@ suspend fun Service.createKitonyBoxNotificationBuilder(): NotificationCompat.Bui
             setOngoing(true)
             setShowWhen(true)
             setOnlyAlertOnce(true)
-            setPriority(NotificationCompat.PRIORITY_HIGH)
+            setPriority(priority)
         }
     }
 
-fun Service.ensureNotificationChannel() {
+fun Service.ensureNotificationChannel(
+    isSuspended: Boolean = GlobalState.isSmartStopped,
+    isHighPriority: Boolean = GlobalState.isNotificationHighPriority
+) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-    val manager = getSystemService(NotificationManager::class.java)
-    val channel = manager?.getNotificationChannel(GlobalState.NOTIFICATION_CHANNEL)
-    if (channel == null || channel.importance != NotificationManager.IMPORTANCE_LOW) {
-        manager?.createNotificationChannel(
-            NotificationChannel(GlobalState.NOTIFICATION_CHANNEL, "KitonyBox Service", NotificationManager.IMPORTANCE_LOW)
-        )
+    val manager = getSystemService(NotificationManager::class.java) ?: return
+    val channelId = when {
+        isSuspended -> GlobalState.NOTIFICATION_CHANNEL_SUSPENDED
+        isHighPriority -> GlobalState.NOTIFICATION_CHANNEL_HIGH
+        else -> GlobalState.NOTIFICATION_CHANNEL
+    }
+    val channel = manager.getNotificationChannel(channelId)
+    if (channel == null) {
+        val importance = when {
+            isSuspended -> NotificationManager.IMPORTANCE_DEFAULT
+            isHighPriority -> NotificationManager.IMPORTANCE_HIGH
+            else -> NotificationManager.IMPORTANCE_LOW
+        }
+        val name = when {
+            isSuspended -> "KitonyBox Suspended Service"
+            isHighPriority -> "KitonyBox High Priority Service"
+            else -> "KitonyBox Service"
+        }
+        val newChannel = NotificationChannel(channelId, name, importance).apply {
+            setShowBadge(false)
+            if (isSuspended || isHighPriority) {
+                setSound(null, null)
+                enableVibration(false)
+            }
+        }
+        manager.createNotificationChannel(newChannel)
     }
 }
 
 @SuppressLint("ForegroundServiceType")
 fun Service.startForeground(notification: Notification, useSpecialType: Boolean = true) {
-    ensureNotificationChannel()
+    ensureNotificationChannel(GlobalState.isSmartStopped, GlobalState.isNotificationHighPriority)
 
     val type = if (Build.VERSION.SDK_INT >= 34 && useSpecialType && !GlobalState.isSmartStopped) {
         android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE

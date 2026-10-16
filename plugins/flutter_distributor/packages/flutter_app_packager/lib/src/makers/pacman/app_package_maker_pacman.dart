@@ -46,8 +46,10 @@ class AppPackageMakerPacman extends AppPackageMaker {
     /// /usr/share/icons/hicolor/128x128/apps
     /// /usr/share/icons/hicolor/256x256/apps
 
-    final applicationsDir =
-        path.join(packagingDirectory.path, 'usr/share/applications');
+    final applicationsDir = path.join(
+      packagingDirectory.path,
+      'usr/share/applications',
+    );
     final icon128Dir = path.join(
       packagingDirectory.path,
       'usr/share/icons/hicolor/128x128/apps',
@@ -56,8 +58,10 @@ class AppPackageMakerPacman extends AppPackageMaker {
       packagingDirectory.path,
       'usr/share/icons/hicolor/256x256/apps',
     );
-    final metainfoDir =
-        path.join(packagingDirectory.path, 'usr/share/metainfo');
+    final metainfoDir = path.join(
+      packagingDirectory.path,
+      'usr/share/metainfo',
+    );
     final mkdirProcessResult = await $('mkdir', [
       '-p',
       path.join(packagingDirectory.path, 'usr/share', makeConfig.appBinaryName),
@@ -88,8 +92,10 @@ class AppPackageMakerPacman extends AppPackageMaker {
       );
     }
     if (makeConfig.metainfo != null) {
-      final metainfoPath =
-          path.join(Directory.current.path, makeConfig.metainfo!);
+      final metainfoPath = path.join(
+        Directory.current.path,
+        makeConfig.metainfo!,
+      );
       final metainfoFile = File(metainfoPath);
       if (!metainfoFile.existsSync()) {
         throw MakeError("Metainfo $metainfoPath path wasn't found");
@@ -105,8 +111,9 @@ class AppPackageMakerPacman extends AppPackageMaker {
     // create & write the files got from makeConfig
     final installFile = File(path.join(packagingDirectory.path, '.INSTALL'));
     final pkgInfoFile = File(path.join(packagingDirectory.path, '.PKGINFO'));
-    final desktopEntryFile =
-        File(path.join(applicationsDir, '${makeConfig.appBinaryName}.desktop'));
+    final desktopEntryFile = File(
+      path.join(applicationsDir, '${makeConfig.appBinaryName}.desktop'),
+    );
 
     if (!installFile.existsSync()) installFile.createSync();
     if (!pkgInfoFile.existsSync()) pkgInfoFile.createSync();
@@ -123,9 +130,6 @@ class AppPackageMakerPacman extends AppPackageMaker {
       '${packagingDirectory.path}/usr/share/${makeConfig.appBinaryName}/',
     ]);
 
-    // Ensure the core binary has setuid bit set before packaging so that
-    // .MTREE records the elevated permissions. The postinstall script will
-    // re-apply ownership on the target system as a safety net.
     final coreFile = File(
       path.join(
         packagingDirectory.path,
@@ -135,24 +139,27 @@ class AppPackageMakerPacman extends AppPackageMaker {
       ),
     );
     if (coreFile.existsSync()) {
-      await $('chmod', ['+sx', coreFile.path]);
+      await $('chmod', ['0755', coreFile.path]);
     }
 
     // MTREE Metadata using bsdtar wrapped in fakeroot so uid/gid are recorded
     // as root. This is required for setuid binaries to be effective after
     // installation.
-    ProcessResult mtreeResult = await $('fakeroot', [
-      'bsdtar',
-      '-czf',
-      '.MTREE',
-      '--format=mtree',
-      '--options=!all,use-set,type,uid,gid,mode,time,size,md5,sha256,link',
-      '.PKGINFO',
-      '.INSTALL',
-      'usr',
-    ], environment: {
-      'LANG': 'C',
-    }, workingDirectory: packagingDirectory.path);
+    ProcessResult mtreeResult = await $(
+      'fakeroot',
+      [
+        'bsdtar',
+        '-czf',
+        '.MTREE',
+        '--format=mtree',
+        '--options=!all,use-set,type,uid,gid,mode,time,size,md5,sha256,link',
+        '.PKGINFO',
+        '.INSTALL',
+        'usr',
+      ],
+      environment: {'LANG': 'C'},
+      workingDirectory: packagingDirectory.path,
+    );
     if (mtreeResult.exitCode != 0) {
       throw MakeError(mtreeResult.stderr);
     }
@@ -160,42 +167,30 @@ class AppPackageMakerPacman extends AppPackageMaker {
     // create the pacman package using fakeroot and bsdtar
     // fakeroot -- env LANG=C bsdtar -cf - .MTREE .PKGINFO * | xz -c -z - > $pkgname-$pkgver-$pkgrel-$arch.tar.xz
 
-    ProcessResult archiveResult = await $('fakeroot', [
-      'bsdtar',
-      '-cf',
-      'temptar',
-      '.MTREE',
-      '.INSTALL',
-      '.PKGINFO',
-      'usr',
-    ], environment: {
-      'LANG': 'C',
-    }, workingDirectory: packagingDirectory.path);
+    ProcessResult archiveResult = await $(
+      'fakeroot',
+      ['bsdtar', '-cf', 'temptar', '.MTREE', '.INSTALL', '.PKGINFO', 'usr'],
+      environment: {'LANG': 'C'},
+      workingDirectory: packagingDirectory.path,
+    );
     if (archiveResult.exitCode != 0) {
       throw MakeError(archiveResult.stderr);
     }
 
-    ProcessResult processResult = await $(
-      'xz',
-      [
-        '-z',
-        'temptar',
-      ],
-      workingDirectory: packagingDirectory.path,
-    );
+    ProcessResult processResult = await $('xz', [
+      '-z',
+      'temptar',
+    ], workingDirectory: packagingDirectory.path);
 
     if (processResult.exitCode != 0) {
       throw MakeError(processResult.stderr);
     }
 
     // copy file from temptar.xz to the makeConfig.outputFile.path
-    final copyResult = await $(
-      'mv',
-      [
-        '${packagingDirectory.path}/temptar.xz',
-        makeConfig.outputFile.path,
-      ],
-    );
+    final copyResult = await $('mv', [
+      '${packagingDirectory.path}/temptar.xz',
+      makeConfig.outputFile.path,
+    ]);
     if (copyResult.exitCode != 0) {
       throw MakeError(copyResult.stderr);
     }

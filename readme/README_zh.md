@@ -7,114 +7,86 @@
   <strong>Another Better Mihomo Client</strong>
 </p>
 
-**KitonyBox 是一款使用Mihomo(Clash Meta)内核、基于FlClash早期版本进行重构的、多平台网络调试及规则分流客户端**
+**KitonyBox 是一款多平台的网络分流和 DNS 调试工具，基于强大的 Mihomo 内核深度打造。我们专注于极致的用户体验、严格的隐私安全与细微的功能打磨，致力于提供更加轻量畅快、低资源消耗即可长期稳定运行的现代化客户端体验。**
 
-秉承“Better Experience更优体验”的原则，KitonyBox在继承原版优秀界面的基础上，深度优化了诸多细节与实用功能/逻辑。设计目标: 前台流畅丝滑、后台省电无感，致力于成为体验更好、以少量资源消耗即可持续稳定运行的 Mihomo 客户端
-
-KitonyBox意为: Better Experience, Out of the box，更好的体验，亦开箱可用
+秉承 **“Better Experience, Out of the box”（更优体验，亦开箱可用）** 的设计理念，KitonyBox 深度挖掘系统与硬件潜能，实现前台高帧率简洁流畅、后台低能耗与低资源占用。项目已率先通过 SignPath 开源基金会的人工审核安全溯源，Windows 端已装载官方权威的 OV 数字签名证书。
 
 [![Latest Release](https://img.shields.io/github/v/release/NZESupB/Bettbox?style=for-the-badge&logo=github&color=238636&label=Release)](https://github.com/NZESupB/Bettbox/releases/latest) [![Core](https://img.shields.io/github/v/release/MetaCubeX/mihomo?style=for-the-badge&logo=go&logoColor=white&color=8A2BE2&label=Mihomo)](https://github.com/MetaCubeX/mihomo/releases/latest)
+
+<p align="center">
+  <img src="../snapshots/home.png" alt="KitonyBox" />
+</p>
+
 ---
 ### ✈️ Telegram 社区交流
-
-</div>
-
-<div align="left">
 
 [![Telegram Group](https://img.shields.io/badge/KitonyBox-Chat-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_chat) [![Telegram Channel](https://img.shields.io/badge/KitonyBox-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/appshub_channel)
 
 ---
 ## 🚀 核心特性
 
-* **开箱即用**：稳定的权限处理与舒适的 TUN/VPN 体验，大量预置优化细节，开箱即达可用状态。
-* **精雕细琢**：打磨每处 UI 与功能交互细节，前台高帧率动画流畅，移动端低能耗，桌面端低占用。
-* **安全守护**：内核紧跟 Mihomo 主线分支且积极适配最新特性，多平台保持严格的权限控制与校验。
-* **稳定容错**：优化多平台极端场景下的边界问题并内置双重配置检测验证，媲美企业级的使用稳定性。
-* **性能优先**：桌面端原生 ARM64 架构支持，提供硬件分级和 Flutter 以及原生优化，榨干硬件性能。
-* **增强工具**：首个多平台无感智能启停、Android端休眠支持、一键禁用QUIC、托盘菜单增强等等。
-* **可视化设置**：提供丰富参数的可视化调节界面，支持改动即时生效，无需繁琐修改配置。
-* **首页小组件**：内置多款精致 Widget 小组件，在首页直观掌控实时网速与全局运行状态。
-* **个性化定制**：支持丰富色彩主题、自定义图标/标题等，甚至还包含 10 种精美测速动画。
-* **自定义适配**：提供首个JS覆写脚本可用的分流 UI 适配，以及自定义可用的可视化便捷开关。
-* **专业编辑**：多平台内置高性能重构版code-forge编辑器，甚至可媲美专业级别的编辑器体验。
-* **设备兼容**：持续维护面向旧版系统及老旧硬件的 Compatible 兼容版本，延长设备使用周期。
-* **零隐私风险**：开源、无广告，全透明的 CI/CD 流程且接受全方位审计，杜绝后台隐私收集。
-* **社区导向**：我们会认真评估社区反馈，优先对待高质量的 Issue，你的声音不会无故被淹没。
-
----
-</div>
-
-###   🛩️ 推荐服务
-### 小众低调专线  〢  [百变小樱](https://www.bbxy01.com/v2/register?code=c09R)
-
-### KitonyBox新用户独享68折优惠码：kitonybox68
-
-**简评** : ❚ ❚  老牌小众专线，海外团队运营多年，稳定性与口碑优秀，折后约17元/月或127元/年，适合对稳定性和延迟要求较高的用户，后台每次签到可额外领取叠加5-10GB流量
-
---------------------------------
-### 低价直连  〢  [良心云](https://xn--9kqz23b19z.com/#/register?code=VTnrQYAj)  〢  [一分](https://xn--4gqx1hgtfdmt.com/#/register?code=AuCiXprV)  〢  [赔钱](https://xn--mes358aby2apfg.com/register?code=z7TUZLmM&cover=sfw)
-
-**简评** : ❚  AWS或资源渠道机，直连风险相对较低，1000G不限时套餐通常更有性价比，量大管饱，价格低廉，适合要求不高的用户或备用机场流量选择
+* **开箱即用**：完善的权限引导与舒适的 TUN / VPN 体验，预置大量合理优化策略，安装即达最佳可用状态。
+* **轻量畅快**：深度调优系统与渲染管线，前台交互动画高帧率简洁丝滑，移动端低能耗，桌面端低资源占用。
+* **安全可信**：内核紧跟 Mihomo 主线，遵循各平台最小权限设计；通过 SignPath 审计并装载 Windows OV 数字签名证书。
+* **稳定容错**：优化多平台极端网络环境下的边界问题，内置双重配置检测验证与保护机制，带来媲美企业级应用的长期稳定性。
+* **架构优化**：桌面端原生 ARM64 架构深度支持，提供硬件性能分级，同时持续维护面向老旧设备的 Compatible 兼容版本。
+* **智能守护**：支持多平台无感智能启停、移动端低功耗休眠策略、一键禁用 QUIC 以及托盘菜单多维快捷控制。
+* **可视化设置**：提供丰富深入的可视化参数调节界面，支持改动即时生效，摆脱繁琐的手动改写配置负担。
+* **首页小组件**：内置多款设计精良的 Widget 小组件，在首页直观掌控实时网速、连接与全局运行状态。
+* **个性化定制**：支持丰富的色彩主题、自定义图标与标题等，并内置 30 种精美的测速动效。
+* **生态与扩展**：支持外置 JS 覆写脚本的可视化 UI 适配，深度重构的Code-forge高性能编辑器。
+* **零隐私风险**：代码完全透明开源、无广告，全自动化 CI/CD 流程接受全方位审计，零后台隐私收集。
+* **社区导向**：我们会认真评估社区反馈，积极响应高质量 Issue，与活跃的用户社群共同打磨进化。
 
 ---
 ## 🛠️ 安装与下载
 
-请前往 **[[Releases]](https://github.com/NZESupB/Bettbox/releases)** 页面下载最新适合您平台和系统的安装包
+请前往 **[[Releases]](https://github.com/NZESupB/Bettbox/releases)** 页面下载最新适合您平台和系统的安装包：
 
+* **桌面端支持**: 
+  * **Windows 8.1+:** (x64 / arm64)
+  * **Linux Kernel 5.4+:** (x64 / arm64)
+  * **macOS 12.0+:** (Intel / Apple Silicon)
+* **移动端及其他**: 
+  * **Android 8.0+:** (ARMv8 / ARMv7 / x86_64 / Universal) 
+  * **Android TV:** 完整大屏适配，可选 ARMv7 32位版本
+  * **鸿蒙 NEXT:** 可配合 [[卓易通]](https://harmonyos.cool/android-app) 稳定使用
 
-* **全平台桌面端**: 
-**Windows 8.1+:** (x64/arm64)
-**Linux Kernel 5.4+:** (x64/arm64)
-**macOS 10.15+:** (Intel/Apple Silicon)
-* **Android 8.0+:** Android (ARMv8/ ARMv7/ x86_64/ Universal) 
-* **Android TV:** 已适配，可选 ARMv7 32位
-* **鸿蒙 NEXT:** 可配合 [[卓易通]](https://harmonyos.cool/android-app) 使用
-
-**其他安装方式:**<br>
-**ArchLinux:** <code>yay -S kitonybox-bin 或 paru -S kitonybox-bin</code> (由[lyj404](https://github.com/lyj404/kitonybox-aur)维护)<br>
-**AMD64=v1:** <code>yay -S kitonybox-compatible-bin 或 paru -S kitonybox-compatible-bin</code> (由[VillagerTom](https://github.com/VillagerTom)维护)
-
----
-##  常见问题
-
-1.  **安装启动及安全问题**：
-   - 安卓端设备，请检查**是否授予了充足的后台权限，并满足最低系统要求**:Android 8.0+
-   - 桌面端旧设备，请检查系统平台架构**是否需要下载特定CPU等级的Compatible版本**
-   - **安全相关：KitonyBox 项目开源透明零隐私上传，当前代码已通过 Signpath 安全审计**
-
-2.  **桌面端常见问题**：
-   - Windows管理员权限：KitonyBox在安装时已提前处理，**无需手动再次授权**
-   - 无法开启TUN虚拟网卡：macOS和Linux**请确保输入正确密码给与权限授权**
-   - 其他报错：请提供Debug信息，并**确保没有冲突的代理软件或服务正在运行**
-   - 其他问题如持续存在，请提交ISSUE反馈
-
-3.  **macOS安装教程**：
-   - 根据所属平台(Intel/Apple Silicon)下载完成后，双击打开 KitonyBox-macos-xx.dmg 文件
-   - 将 KitonyBox 图标拖拽至 Applications（应用程序）文件夹中即可完成安装
-   - **首次运行避开系统安全拦截**（[由于当前暂未购买 Apple 开发者证书](https://support.apple.com/en-us/102445)）：
-     - **推荐**：进入“应用程序”文件夹，**右键 KitonyBox 图标**，选择 **“打开”**，在确认弹窗中再次点击 **“打开”** 即可
-     - **备选**：如果直接双击被阻止，请前往 Mac 系统“设置” -> “隐私与安全性”，找到 KitonyBox 并点击 **“仍要打开”**
-   - 首次开启 TUN 模式时，系统会弹出密码授权窗口，请输入当前用户密码以允许 KitonyBox 配置网络
-   - **如果提示“已损坏，打不开，移到废纸篓”**：
-     - 这是 macOS 针对未签名软件的安全机制误报。请打开终端（Terminal），运行以下命令以解除隔离：
-       ```bash
-       xattr -d com.apple.quarantine /Applications/KitonyBox.app
-       ```
-
-4.  **无法导入订阅链接**：
-   - **请务必先尝试重置链接**，确保链接正常后导入
-   - 其他问题如持续存在，请提交ISSUE反馈
-
-5.  **待持续完善补充..**
+**Linux社区维护包:**<br>
+* **ArchLinux:** <code>yay -S kitonybox-bin</code> 或 <code>paru -S kitonybox-bin</code> (由 [lyj404](https://github.com/lyj404/kitonybox-aur) 维护)<br>
+* **AMD64=v1 (旧硬件兼容):** <code>yay -S kitonybox-compatible-bin</code> 或 <code>paru -S kitonybox-compatible-bin</code> (由 [VillagerTom](https://github.com/VillagerTom) 维护)
 
 ---
+## 💡 常见问题
 
-##  开发构建及UI适配
+1. **安装环境与兼容版本**：
+   - 安卓端设备请检查是否授予了充足的后台运行权限，系统需满足 Android 8.0+。
+   - 桌面端老旧硬件请根据 CPU 指令集架构选择对应的 Compatible 兼容版本。
+   - 安全相关：KitonyBox 全流程开源透明，代码已通过 SignPath 权威安全审计，零隐私收集。
+
+2. **桌面端权限与 TUN**：
+   - Windows 端管理员权限安装包已内置处理，日常使用无需手动再次授权。
+   - macOS / Linux 开启 TUN 虚拟网卡时，请在系统提示时输入正确的系统密码以完成授权。
+   - 如遇其他报错，请先确认后台没有其他代理工具冲突占用端口，并附带 Debug 日志提交反馈。
+
+3. **macOS 首次安装指南**：
+   - 根据平台 (Intel / Apple Silicon) 下载并打开 `.dmg` 安装包，将 KitonyBox 图标拖入 Applications 文件夹。
+   - **避开系统安全拦截**（[当前暂未购买 Apple 商业开发者证书](https://support.apple.com/en-us/102445)）：
+     - **推荐**：在“访达 - 应用程序”中，**右键点击 KitonyBox 图标选择“打开”**，在系统弹窗中确认点击“打开”即可。
+     - **备选**：若被阻止，可前往系统“设置 -> 隐私与安全性”，找到 KitonyBox 点击“仍要打开”。
+   - 首次开启 TUN 模式时，系统会提示密码授权，请输入密码允许创建虚拟网络接口。
+
+4. **订阅导入与排障**：
+   - 若导入失败，请优先在服务商后台重置订阅链接后重新尝试。
+   - 如持续异常，请先向节点服务商核对节点格式，确认属客户端问题可随时提交 Issue。
+
+---
+## 💻 开发构建与 UI 适配
 
 以 Windows 平台构建为例：
 
-* 你需要一台 Windows 设备（系统 ≥ Windows 10）
-* 其他必要环境：Git，Visual Studio，Flutter 3.44.x，Golang，Inno Setup，Rust
+* 系统需求：Windows 10 及以上
+* 依赖环境：Git, Visual Studio, Flutter 3.47.x, Golang, Inno Setup, Rust
 ```bash
 * flutter pub get (获取相关依赖)
 * dart .\setup.dart windows --arch amd64 --out core (仅构建Core核心)
@@ -124,20 +96,40 @@ KitonyBox意为: Better Experience, Out of the box，更好的体验，亦开箱
 
 自定义脚本 UI 适配：
 
-* KitonyBox自v1.18.8版本起支持外置覆写脚本适配UI，例如以AIsouler的**[脚本/配置分享](https://github.com/AIsouler/MyClash)**为例，仅需要在脚本首行添加以下声明，即可直接使用KitonyBox内置的可视化开关。
+* KitonyBox 支持外置覆写脚本适配图形化 UI。以 AIsouler 的 **[脚本/配置分享](https://github.com/AIsouler/MyClash)** 为例，只需在脚本首行添加以下声明，即可直接联动内置可视化开关：
 * <code>const Compatible_With_KitonyBox = { ruleOptionsEnable: true };</code>
+* 若脚本开关中包含策略组与其他功能开关，可通过 `policyGroupOptions` 声明策略组开关名称；未声明的开关会自动归纳至「⚙️ 其他设置」二级菜单：
+
+```js
+const Compatible_With_KitonyBox = {
+  ruleOptionsEnable: true,
+  // 声明属于策略组的开关名称，需与 ruleOptionsEnable 的键完全一致
+  policyGroupOptions: ['🚀 节点选择', '🛑 广告拦截'],
+};
+```
+* 未声明 `policyGroupOptions` 或名称不匹配时，所有开关将平铺展示。
 
 ---
+### 🛩️ 推荐服务
+#### IEPL 专线  〢  [百变小樱](https://www.bbxy01.com/v2/register?code=c09R)  〢  [白月光](https://www.sibker.com/register?invite_code=YZq6L5zd)  〢  [Ytoo](https://y-too.net/aff.php?aff=10354)
+--------------------------------
+#### 低价 直连  〢  [良心云](https://xn--9kqz23b19z.com/#/register?code=VTnrQYAj)  〢  [吹雪云](https://xn--9kqs1lo79d.com/#/register?code=skKMTab7)  〢  [一分](https://xn--4gqx1hgtfdmt.com/#/register?code=AuCiXprV) 
+--------------------------------
+#### 百变小樱专享68折优惠码：bettbox68 ，参见：[相关介绍](https://t.me/appshub_channel/381)
+--------------------------------
 
+**简评** : ❚ ❚ 以上链接基本为自用或 TG 群组讨论推荐，此处仅做 AFF 展示（注：通过链接购买第三方服务，开发者可获得少量佣金支持），这并不代表对其服务作出承诺或保证。请自行甄别并合理选择。
+
+---
 ### ☕ 赞助支持
 
-**如果您觉得这个项目对您有所帮助，可通过以下方式赞助开发或使用推荐链接：**
+**如果您觉得这个项目对您有所帮助，也可通过以下方式赞助开发或使用 [推荐链接](../README.md#%EF%B8%8F-%E6%8E%A8%E8%8D%90%E6%9C%8D%E5%8A%A1)：**
 
-* EVM Compatible：  <code>0xF8B1B39431013359D83F38a4e403087624618E67</code>
+* TRON (TRC-20)： <code>TCkTtZfF2WrciZLaJj3e1aqrh3zdTnCkDa</code>
 * Bitcoin： <code>bc1qu950cl6035qvllmzk6cfw3l30j2lg3cq9n6g6h</code>
----
 
-##  致谢
+---
+## ❤️ 致谢
 
 <table>
   <tr>
@@ -150,14 +142,14 @@ KitonyBox意为: Better Experience, Out of the box，更好的体验，亦开箱
   </tr>
 </table>
 
-**[FlClash GUI](https://github.com/chen08209/FlClash)** 〢 **[Mihomo Core](https://github.com/MetaCubeX/mihomo)**
+* **[FlClash GUI](https://github.com/chen08209/FlClash)**（本项目起源于优秀的开源项目 FlClash，向原作者的开创性探索与贡献致敬）
+* **[Mihomo Core](https://github.com/MetaCubeX/mihomo)**（强大灵活的核心驱动）
 
-其他为本项目添砖加瓦的 [Contributors](https://github.com/NZESupB/Bettbox/graphs/contributors) 以及相关开源项目参考
+感谢所有为本项目添砖加瓦的 [Contributors](https://github.com/NZESupB/Bettbox/graphs/contributors)，以及以下开源项目的启发与使用参考：
 
-[CMFA](https://github.com/MetaCubeX/ClashMetaForAndroid), [Sparkle](https://github.com/xishang0128/sparkle), [SFA](https://github.com/SagerNet/sing-box-for-android), [HUSI](https://github.com/xchacha20-poly1305/husi), [V2rayN](https://github.com/2dust/v2rayN)
+[Zashboard](https://github.com/Zephyruso/zashboard), [CMFA](https://github.com/MetaCubeX/ClashMetaForAndroid), [Sparkle](https://github.com/xishang0128/sparkle), [SFA](https://github.com/SagerNet/sing-box-for-android), [HUSI](https://github.com/xchacha20-poly1305/husi), [V2rayN](https://github.com/2dust/v2rayN), [Bett-rules](https://github.com/appshubcc/bett-rules)
 
 ---
-
 ## 📄 开源协议
 
-GPL-3.0 license 开源协议
+本项目采用 [GPL-3.0 License](../LICENSE) 开源协议。

@@ -1,6 +1,6 @@
 import 'package:kitony_box/plugins/tile.dart';
 import 'package:kitony_box/state.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class TileManager extends StatefulWidget {
   final Widget child;

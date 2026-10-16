@@ -7,19 +7,33 @@ part of '../core.dart';
 // **************************************************************************
 
 _SetupParams _$SetupParamsFromJson(Map<String, dynamic> json) => _SetupParams(
-  config: json['config'] as Map<String, dynamic>,
   selectedMap: Map<String, String>.from(json['selected-map'] as Map),
   testUrl: json['test-url'] as String,
   overrideTestUrl: json['override-test-url'] as bool? ?? true,
+  profilePath: json['profile-path'] as String? ?? '',
+  ageSecretKey: json['age-secret-key'] as String? ?? '',
+  scriptedConfig: json['scripted-config'] as String? ?? '',
+  patch: json['patch'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$SetupParamsToJson(_SetupParams instance) =>
     <String, dynamic>{
-      'config': instance.config,
       'selected-map': instance.selectedMap,
       'test-url': instance.testUrl,
       'override-test-url': instance.overrideTestUrl,
+      'profile-path': instance.profilePath,
+      'age-secret-key': instance.ageSecretKey,
+      'scripted-config': instance.scriptedConfig,
+      'patch': instance.patch,
     };
+
+_SetupResult _$SetupResultFromJson(Map<String, dynamic> json) => _SetupResult(
+  message: json['message'] as String? ?? '',
+  global: json['global'] as String? ?? '',
+);
+
+Map<String, dynamic> _$SetupResultToJson(_SetupResult instance) =>
+    <String, dynamic>{'message': instance.message, 'global': instance.global};
 
 _UpdateParams _$UpdateParamsFromJson(Map<String, dynamic> json) =>
     _UpdateParams(
@@ -123,6 +137,7 @@ _AndroidVpnOptions _$AndroidVpnOptionsFromJson(Map<String, dynamic> json) =>
       routeMode: json['routeMode'] as String? ?? 'config',
       dnsServerAddress: json['dnsServerAddress'] as String,
       dozeSuspend: json['dozeSuspend'] as bool? ?? false,
+      mtu: (json['mtu'] as num?)?.toInt() ?? 9000,
     );
 
 Map<String, dynamic> _$AndroidVpnOptionsToJson(_AndroidVpnOptions instance) =>
@@ -139,6 +154,7 @@ Map<String, dynamic> _$AndroidVpnOptionsToJson(_AndroidVpnOptions instance) =>
       'routeMode': instance.routeMode,
       'dnsServerAddress': instance.dnsServerAddress,
       'dozeSuspend': instance.dozeSuspend,
+      'mtu': instance.mtu,
     };
 
 _InitParams _$InitParamsFromJson(Map<String, dynamic> json) => _InitParams(
@@ -299,6 +315,8 @@ const _$ActionMethodEnumMap = {
   ActionMethod.validateConfig: 'validateConfig',
   ActionMethod.updateConfig: 'updateConfig',
   ActionMethod.getConfig: 'getConfig',
+  ActionMethod.getRuntimeConfig: 'getRuntimeConfig',
+  ActionMethod.exportConfig: 'exportConfig',
   ActionMethod.getProxies: 'getProxies',
   ActionMethod.changeProxy: 'changeProxy',
   ActionMethod.getTraffic: 'getTraffic',
@@ -316,6 +334,12 @@ const _$ActionMethodEnumMap = {
   ActionMethod.sideLoadExternalProvider: 'sideLoadExternalProvider',
   ActionMethod.startLog: 'startLog',
   ActionMethod.stopLog: 'stopLog',
+  ActionMethod.getLogs: 'getLogs',
+  ActionMethod.clearLogs: 'clearLogs',
+  ActionMethod.startTrackRequests: 'startTrackRequests',
+  ActionMethod.stopTrackRequests: 'stopTrackRequests',
+  ActionMethod.getRequests: 'getRequests',
+  ActionMethod.clearRequests: 'clearRequests',
   ActionMethod.startListener: 'startListener',
   ActionMethod.stopListener: 'stopListener',
   ActionMethod.getCountryCode: 'getCountryCode',
@@ -329,6 +353,7 @@ const _$ActionMethodEnumMap = {
   ActionMethod.decryptAgeConfig: 'decryptAgeConfig',
   ActionMethod.getMode: 'getMode',
   ActionMethod.parseExternalProviderContent: 'parseExternalProviderContent',
+  ActionMethod.getCoreStatus: 'getCoreStatus',
   ActionMethod.setState: 'setState',
   ActionMethod.startTun: 'startTun',
   ActionMethod.stopTun: 'stopTun',
@@ -357,3 +382,34 @@ Map<String, dynamic> _$ActionResultToJson(_ActionResult instance) =>
     };
 
 const _$ResultTypeEnumMap = {ResultType.success: 0, ResultType.error: -1};
+
+_CoreStatus _$CoreStatusFromJson(Map<String, dynamic> json) => _CoreStatus(
+  physical: (json['physical'] as num?)?.toInt() ?? 0,
+  inUse: (json['in-use'] as num?)?.toInt() ?? 0,
+  reclaimable: (json['reclaimable'] as num?)?.toInt() ?? 0,
+  goroutines: (json['goroutines'] as num?)?.toInt() ?? 0,
+  heapObjects: (json['heap-objects'] as num?)?.toInt() ?? 0,
+  lastGC: (json['last-gc'] as num?)?.toInt() ?? 0,
+  rules: (json['rules'] as num?)?.toInt() ?? 0,
+  proxies: (json['proxies'] as num?)?.toInt() ?? 0,
+  proxyGroups: (json['proxy-groups'] as num?)?.toInt() ?? 0,
+  ruleProviders: (json['rule-providers'] as num?)?.toInt() ?? 0,
+  proxyProviders: (json['proxy-providers'] as num?)?.toInt() ?? 0,
+  geodataUse: json['geodata-use'] as String? ?? 'None',
+);
+
+Map<String, dynamic> _$CoreStatusToJson(_CoreStatus instance) =>
+    <String, dynamic>{
+      'physical': instance.physical,
+      'in-use': instance.inUse,
+      'reclaimable': instance.reclaimable,
+      'goroutines': instance.goroutines,
+      'heap-objects': instance.heapObjects,
+      'last-gc': instance.lastGC,
+      'rules': instance.rules,
+      'proxies': instance.proxies,
+      'proxy-groups': instance.proxyGroups,
+      'rule-providers': instance.ruleProviders,
+      'proxy-providers': instance.proxyProviders,
+      'geodata-use': instance.geodataUse,
+    };

@@ -6,30 +6,43 @@ import 'package:kitony_box/state.dart';
 import 'package:kitony_box/views/proxies/common.dart';
 import 'package:kitony_box/widgets/widgets.dart';
 import 'package:emoji_regex/emoji_regex.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 
-final proxyIconProvider = Provider.family<String, String>((ref, proxyName) {
+final _proxyIconMatchersProvider = Provider.autoDispose<List<(RegExp, String)>>(
+  (ref) {
+    final iconMap = ref.watch(
+      proxiesStyleSettingProvider.select((s) => s.iconMap),
+    );
+    final matchers = <(RegExp, String)>[];
+    for (final entry in iconMap.entries) {
+      try {
+        matchers.add((RegExp(entry.key), entry.value));
+      } catch (_) {}
+    }
+    return matchers;
+  },
+);
+
+final proxyIconProvider = Provider.autoDispose.family<String, String>((
+  ref,
+  proxyName,
+) {
   if (proxyName.isEmpty) return '';
   final style = ref.watch(
     proxiesStyleSettingProvider.select((s) => s.iconStyle),
   );
   if (style == ProxiesIconStyle.none) return '';
 
-  final iconMap = ref.watch(
-    proxiesStyleSettingProvider.select((s) => s.iconMap),
-  );
-  for (final entry in iconMap.entries) {
-    try {
-      if (RegExp(entry.key).hasMatch(proxyName)) {
-        return entry.value;
-      }
-    } catch (_) {}
+  for (final (pattern, icon) in ref.watch(_proxyIconMatchersProvider)) {
+    if (pattern.hasMatch(proxyName)) {
+      return icon;
+    }
   }
 
-  final groups = ref.watch(groupsProvider);
-  return groups.getGroup(proxyName)?.icon ?? '';
+  return ref.watch(
+    groupsProvider.select((groups) => groups.getGroup(proxyName)?.icon ?? ''),
+  );
 });
 
 class ProxyCard extends StatelessWidget {
@@ -90,13 +103,11 @@ class ProxyCard extends StatelessWidget {
             return SizedBox(
               height: measure.labelSmallHeight,
               width: measure.labelSmallHeight,
-              child: delayAnimation == DelayAnimationType.none
-                  ? const CircularProgressIndicator(strokeWidth: 2)
-                  : _buildDelayAnimation(
-                      delayAnimation,
-                      measure.labelSmallHeight,
-                      context.colorScheme.primary,
-                    ),
+              child: DelayAnimation(
+                type: delayAnimation,
+                size: measure.labelSmallHeight,
+                color: context.colorScheme.primary,
+              ),
             );
           }
 
@@ -104,12 +115,14 @@ class ProxyCard extends StatelessWidget {
             return SizedBox(
               height: measure.labelSmallHeight,
               width: measure.labelSmallHeight,
-              child: IconButton(
-                icon: const Icon(Icons.bolt),
-                iconSize: measure.labelSmallHeight,
-                padding: EdgeInsets.zero,
-                tooltip: appLocalizations.startTest,
-                onPressed: _handleTestCurrentDelay,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _handleTestCurrentDelay,
+                child: Icon(
+                  Icons.bolt,
+                  size: measure.labelSmallHeight,
+                  color: context.colorScheme.onSurfaceVariant,
+                ),
               ),
             );
           }
@@ -127,47 +140,6 @@ class ProxyCard extends StatelessWidget {
         },
       ),
     );
-  }
-
-  Widget _buildDelayAnimation(
-    DelayAnimationType animationType,
-    double size,
-    Color color,
-  ) {
-    return switch (animationType) {
-      DelayAnimationType.none => Icon(Icons.bolt, size: size),
-      DelayAnimationType.rotatingCircle => SpinKitRotatingCircle(
-        color: color,
-        size: size,
-      ),
-      DelayAnimationType.pulse => SpinKitPulse(color: color, size: size),
-      DelayAnimationType.spinningLines => SpinKitSpinningLines(
-        color: color,
-        size: size,
-      ),
-      DelayAnimationType.threeInOut => SpinKitThreeInOut(
-        color: color,
-        size: size,
-      ),
-      DelayAnimationType.threeBounce => SpinKitThreeBounce(
-        color: color,
-        size: size,
-      ),
-      DelayAnimationType.circle => SpinKitCircle(color: color, size: size),
-      DelayAnimationType.fadingCircle => SpinKitFadingCircle(
-        color: color,
-        size: size,
-      ),
-      DelayAnimationType.fadingFour => SpinKitFadingFour(
-        color: color,
-        size: size,
-      ),
-      DelayAnimationType.wave => SpinKitWave(color: color, size: size),
-      DelayAnimationType.doubleBounce => SpinKitDoubleBounce(
-        color: color,
-        size: size,
-      ),
-    };
   }
 
   Widget _buildProxyNameWithIcon(
@@ -276,6 +248,8 @@ class ProxyCard extends StatelessWidget {
         return Stack(
           children: [
             CommonCard(
+              elevated: false,
+              clipBehavior: Clip.none,
               onPressed: () {
                 _changeProxy(ref);
               },

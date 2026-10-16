@@ -67,10 +67,7 @@ class FlutterDistributor {
           json.decode(json.encode(yamlDoc)),
         );
       } else {
-        _distributeOptions = DistributeOptions(
-          output: 'dist/',
-          releases: [],
-        );
+        _distributeOptions = DistributeOptions(output: 'dist/', releases: []);
       }
     }
     return _distributeOptions!;
@@ -101,8 +98,9 @@ class FlutterDistributor {
 
   Future<void> checkVersion() async {
     String? currentVersion = await _getCurrentVersion();
-    String? latestVersion =
-        await PubDevApi.getLatestVersionFromPackage('flutter_distributor');
+    String? latestVersion = await PubDevApi.getLatestVersionFromPackage(
+      'flutter_distributor',
+    );
 
     if (currentVersion != null &&
         latestVersion != null &&
@@ -175,8 +173,9 @@ class FlutterDistributor {
         }
 
         if (buildResult != null) {
-          String buildMode =
-              buildArguments.containsKey('profile') ? 'profile' : 'release';
+          String buildMode = buildArguments.containsKey('profile')
+              ? 'profile'
+              : 'release';
           Map<String, dynamic>? arguments = {
             'build_mode': buildMode,
             'flavor': buildArguments['flavor'],
@@ -197,10 +196,9 @@ class FlutterDistributor {
           print(
             const JsonEncoder.withIndent('  ').convert(makeResult.toJson()),
           );
-          FileSystemEntity artifact = makeResult.artifacts.first;
-          logger.info(
-            'Successfully packaged ${artifact.path}'.brightGreen(),
-          );
+          for (final artifact in makeResult.artifacts) {
+            logger.info('Successfully packaged ${artifact.path}'.brightGreen());
+          }
           makeResultList.add(makeResult);
         }
       }
@@ -298,8 +296,9 @@ class FlutterDistributor {
       List<Release> releases = [];
 
       if (name.isNotEmpty) {
-        releases =
-            distributeOptions.releases.where((e) => e.name == name).toList();
+        releases = distributeOptions.releases
+            .where((e) => e.name == name)
+            .toList();
       }
 
       if (releases.isEmpty) {
@@ -347,14 +346,16 @@ class FlutterDistributor {
 
           if (job.publish != null || job.publishTo != null) {
             String? publishTarget = job.publishTo ?? job.publish?.target;
-            MakeResult makeResult = makeResultList.first;
-            FileSystemEntity artifact = makeResult.artifacts.first;
-            await publish(
-              artifact,
-              [publishTarget!],
-              publishArguments: job.publish?.args,
-              variables: variables,
-            );
+            for (final makeResult in makeResultList) {
+              for (final artifact in makeResult.artifacts) {
+                await publish(
+                  artifact,
+                  [publishTarget!],
+                  publishArguments: job.publish?.args,
+                  variables: variables,
+                );
+              }
+            }
           }
         }
       }
@@ -379,10 +380,7 @@ class FlutterDistributor {
   }
 
   Future<void> upgrade() async {
-    await $(
-      'dart',
-      ['pub', 'global', 'activate', 'flutter_distributor'],
-    );
+    await $('dart', ['pub', 'global', 'activate', 'flutter_distributor']);
     return Future.value();
   }
 }

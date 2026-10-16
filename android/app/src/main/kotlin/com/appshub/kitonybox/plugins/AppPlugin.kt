@@ -16,7 +16,6 @@ import android.util.Base64
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.content.getSystemService
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
@@ -37,8 +36,13 @@ import io.flutter.plugin.common.MethodChannel.Result
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.ref.WeakReference
@@ -58,7 +62,9 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
     private lateinit var channel: MethodChannel
     private lateinit var scope: CoroutineScope
     private var vpnCallBack: (() -> Unit)? = null
-    private val packages = mutableListOf<Package>()
+    @Volatile
+    private var packages: List<Package> = emptyList()
+    private val packagesMutex = Mutex()
     private val chinaPackageCache = ConcurrentHashMap<String, Boolean>()
 
     private val iconCacheDir by lazy {
@@ -233,10 +239,6 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
                 tip(call.argument<String>("message"))
                 result.success(true)
             }
-            "openFile" -> {
-                openFile(call.argument<String>("path")!!)
-                result.success(true)
-            }
             "getSelfLastUpdateTime" -> {
                 result.success(getSelfLastUpdateTime())
             }
@@ -285,22 +287,6 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
             context.startActivity(intent)
             true
         }.getOrElse { false }
-    }
-
-    private fun openFile(path: String) {
-        val context = KitonyBoxApplication.getAppContext()
-        val file = File(path)
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileProvider",
-            file
-        )
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "text/plain")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        runCatching { context.startActivity(intent) }
     }
 
     private fun updateExcludeFromRecents(value: Boolean?) {
@@ -382,28 +368,37 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
             null
         }
 
-    private suspend fun getPackages(forceRefresh: Boolean = false): List<Package> = withContext(Dispatchers.IO) {
-        if (forceRefresh) packages.clear()
-        if (packages.isNotEmpty()) return@withContext packages
-        val pm = KitonyBoxApplication.getAppContext().packageManager ?: return@withContext emptyList()
-        val selfPackageName = KitonyBoxApplication.getAppContext().packageName
-
-        packages.addAll(pm.getInstalledPackages(0).mapNotNull { packageInfo ->
-            val packageName = packageInfo.packageName ?: return@mapNotNull null
-            if (packageName == selfPackageName) return@mapNotNull null
-            val appInfo = packageInfo.applicationInfo ?: return@mapNotNull null
-
-            val label = runCatching { appInfo.loadLabel(pm).toString() }.getOrDefault(packageName)
-            val system = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            val internet = runCatching {
-                pm.checkPermission(Manifest.permission.INTERNET, packageName) == PackageManager.PERMISSION_GRANTED
-            }.getOrDefault(false)
-            val firstInstallTime = packageInfo.firstInstallTime
-            val lastUpdateTime = packageInfo.lastUpdateTime.takeIf { it > 0 } ?: firstInstallTime
-
-            Package(packageName, label, system, internet, firstInstallTime, lastUpdateTime)
-        })
+    private suspend fun getPackages(forceRefresh: Boolean = false): List<Package> = packagesMutex.withLock {
+        if (!forceRefresh && packages.isNotEmpty()) return@withLock packages
+        packages = withContext(Dispatchers.IO) { loadPackages() }
         packages
+    }
+
+    private suspend fun loadPackages(): List<Package> = coroutineScope {
+        val pm = KitonyBoxApplication.getAppContext().packageManager ?: return@coroutineScope emptyList()
+        val selfPackageName = KitonyBoxApplication.getAppContext().packageName
+        val packageInfos = pm.getInstalledPackages(0)
+        val chunkSize = packageInfos.size / Runtime.getRuntime().availableProcessors() + 1
+
+        packageInfos.chunked(chunkSize).map { chunk ->
+            async {
+                chunk.mapNotNull { packageInfo ->
+                    val packageName = packageInfo.packageName ?: return@mapNotNull null
+                    if (packageName == selfPackageName) return@mapNotNull null
+                    val appInfo = packageInfo.applicationInfo ?: return@mapNotNull null
+
+                    val label = runCatching { appInfo.loadLabel(pm).toString() }.getOrDefault(packageName)
+                    val system = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    val internet = runCatching {
+                        pm.checkPermission(Manifest.permission.INTERNET, packageName) == PackageManager.PERMISSION_GRANTED
+                    }.getOrDefault(false)
+                    val firstInstallTime = packageInfo.firstInstallTime
+                    val lastUpdateTime = packageInfo.lastUpdateTime.takeIf { it > 0 } ?: firstInstallTime
+
+                    Package(packageName, label, system, internet, firstInstallTime, lastUpdateTime)
+                }
+            }
+        }.awaitAll().flatten()
     }
 
     private suspend fun getPackagesToList(forceRefresh: Boolean = false): List<Map<String, Any>> =

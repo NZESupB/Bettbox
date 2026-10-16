@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/metacubex/mihomo/component/age"
 )
@@ -38,6 +39,11 @@ func (result ActionResult) error(data interface{}) {
 }
 
 func handleAction(action *Action, result ActionResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result.error(fmt.Sprintf("panic: %v", r))
+		}
+	}()
 	switch action.Method {
 	case initClashMethod:
 		paramsString := action.Data.(string)
@@ -123,6 +129,49 @@ func handleAction(action *Action, result ActionResult) {
 		return
 	case resetConnectionsMethod:
 		result.success(handleResetConnections())
+		return
+	case getRequestsMethod:
+		result.success(handleGetRequests())
+		return
+	case startTrackRequestsMethod:
+		result.success(handleStartTrackRequests())
+		return
+	case stopTrackRequestsMethod:
+		result.success(handleStopTrackRequests())
+		return
+	case clearRequestsMethod:
+		result.success(handleClearRequests())
+		return
+	case getLogsMethod:
+		result.success(handleGetLogs())
+		return
+	case clearLogsMethod:
+		result.success(handleClearLogs())
+		return
+	case exportConfigMethod:
+		var params ExportConfigParams
+		if err := json.Unmarshal([]byte(action.Data.(string)), &params); err != nil {
+			result.error(err)
+			return
+		}
+		if err := handleExportConfig(&params); err != nil {
+			result.error(err)
+			return
+		}
+		result.success("")
+		return
+	case getRuntimeConfigMethod:
+		params := defaultSetupParams()
+		if err := UnmarshalJson([]byte(action.Data.(string)), params); err != nil {
+			result.error(err)
+			return
+		}
+		content, err := handleGetRuntimeConfig(params)
+		if err != nil {
+			result.error(err)
+			return
+		}
+		result.success(content)
 		return
 	case getConfigMethod:
 		paramsString := action.Data.(string)
@@ -210,6 +259,11 @@ func handleAction(action *Action, result ActionResult) {
 		return
 	case getMemoryMethod:
 		handleGetMemory(func(value string) {
+			result.success(value)
+		})
+		return
+	case getCoreStatusMethod:
+		handleGetCoreStatus(func(value string) {
 			result.success(value)
 		})
 		return

@@ -17,3 +17,5 @@ startup_notify: true
 startup_wm_class: com.appshub.kitonybox
 
 include: []
+extra_files:
+  linux/packaging/polkit/90-kitonybox.rules: 90-kitonybox.rules

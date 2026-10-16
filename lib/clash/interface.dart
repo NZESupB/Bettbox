@@ -18,11 +18,27 @@ mixin ClashInterface {
 
   Future<bool> forceGc({bool forceFreeOSMemory = false});
 
-  FutureOr<String> validateConfig(String data, {String? ageSecretKey});
+  FutureOr<String> validateConfig(
+    String data, {
+    String? ageSecretKey,
+    SetupParams? setup,
+  });
+
+  Future<Result> getRuntimeConfig(SetupParams setupParams);
+
+  Future<Result> exportConfig(
+    String path,
+    String output, {
+    String? ageSecretKey,
+  });
 
   FutureOr<String> decryptAgeConfig(String data, String ageSecretKey);
 
-  FutureOr<Result> getConfig(String path, {String? ageSecretKey});
+  FutureOr<Result> getConfig(
+    String path, {
+    String? ageSecretKey,
+    List<String> disabledGroups,
+  });
 
   Future<Map<String, String>> generateAgeKeyPair();
 
@@ -32,9 +48,9 @@ mixin ClashInterface {
 
   FutureOr<String> updateConfig(UpdateParams updateParams);
 
-  FutureOr<String> setupConfig(SetupParams setupParams);
+  FutureOr<SetupResult> setupConfig(SetupParams setupParams);
 
-  FutureOr<Map> getProxies();
+  FutureOr<String> getProxies();
 
   FutureOr<String> changeProxy(ChangeProxyParams changeProxyParams);
 
@@ -65,11 +81,17 @@ mixin ClashInterface {
 
   FutureOr<String> getMemory();
 
+  FutureOr<String> getCoreStatus();
+
   FutureOr<void> resetTraffic();
 
   FutureOr<void> startLog();
 
   FutureOr<void> stopLog();
+
+  FutureOr<String> getLogs();
+
+  FutureOr<bool> clearLogs();
 
   Future<bool> crash();
 
@@ -80,6 +102,14 @@ mixin ClashInterface {
   FutureOr<bool> closeConnections();
 
   FutureOr<bool> resetConnections();
+
+  FutureOr<void> startTrackRequests();
+
+  FutureOr<void> stopTrackRequests();
+
+  FutureOr<String> getRequests();
+
+  FutureOr<bool> clearRequests();
 
   Future<bool> setState(CoreState state);
 
@@ -100,11 +130,17 @@ mixin AndroidClashInterface {
   Future<DateTime?> getRunTime();
 }
 
+class CoreDisconnectedException implements Exception {
+  const CoreDisconnectedException();
+}
+
 abstract class ClashHandlerInterface with ClashInterface {
   Map<String, Completer> callbackCompleterMap = {};
+  final Map<String, Object> _requestChannels = {};
 
   Future<void> handleResult(ActionResult result) async {
-    final completer = callbackCompleterMap[result.id];
+    final completer = callbackCompleterMap.remove(result.id);
+    _requestChannels.remove(result.id);
     try {
       switch (result.method) {
         case ActionMethod.message:
@@ -112,6 +148,8 @@ abstract class ClashHandlerInterface with ClashInterface {
           completer?.complete(true);
           return;
         case ActionMethod.getConfig:
+        case ActionMethod.getRuntimeConfig:
+        case ActionMethod.exportConfig:
         case ActionMethod.convertAgeSecretKeyToPublicKey:
           completer?.complete(result.toResult);
           return;
@@ -123,11 +161,25 @@ abstract class ClashHandlerInterface with ClashInterface {
           return;
       }
     } catch (e) {
-      commonPrint.log('${result.id} error $e');
+      commonPrint.warn('${result.id} error $e');
     }
   }
 
-  void sendMessage(String message);
+  FutureOr<Object?> sendMessage(String message);
+
+  void abortRequests(Object channel) {
+    final ids = _requestChannels.entries
+        .where((entry) => identical(entry.value, channel))
+        .map((entry) => entry.key)
+        .toList();
+    for (final id in ids) {
+      _requestChannels.remove(id);
+      final completer = callbackCompleterMap.remove(id);
+      if (completer != null && !completer.isCompleted) {
+        completer.completeError(const CoreDisconnectedException());
+      }
+    }
+  }
 
   FutureOr<void> reStart();
 
@@ -142,7 +194,8 @@ abstract class ClashHandlerInterface with ClashInterface {
   }) async {
     final id = '${method.name}#${utils.id}';
 
-    callbackCompleterMap[id] = Completer<T>();
+    final completer = Completer<T>();
+    callbackCompleterMap[id] = completer;
 
     dynamic mDefaultValue = defaultValue;
     if (mDefaultValue == null) {
@@ -151,23 +204,45 @@ abstract class ClashHandlerInterface with ClashInterface {
       } else if (T == bool) {
         mDefaultValue = false;
       } else if (T == Map) {
-        mDefaultValue = {};
+        mDefaultValue = <String, dynamic>{};
       }
     }
+    final FutureOr<T> Function() fallback = onTimeout ?? () => mDefaultValue;
 
-    sendMessage(json.encode(Action(id: id, method: method, data: data)));
+    try {
+      final channel = await sendMessage(
+        json.encode(Action(id: id, method: method, data: data)),
+      );
+      if (channel != null && !completer.isCompleted) {
+        _requestChannels[id] = channel;
+      }
+    } on CoreDisconnectedException {
+      callbackCompleterMap.remove(id);
+      return fallback();
+    } catch (e) {
+      callbackCompleterMap.remove(id);
+      rethrow;
+    }
 
-    return (callbackCompleterMap[id] as Completer<T>).safeFuture(
-      timeout: timeout,
-      onLast: () {
-        callbackCompleterMap.remove(id);
-      },
-      onTimeout:
-          onTimeout ??
-          () {
-            return mDefaultValue;
-          },
-      functionName: id,
+    try {
+      return await completer.safeFuture(
+        timeout: timeout,
+        onLast: () {
+          callbackCompleterMap.remove(id);
+          _requestChannels.remove(id);
+        },
+        onTimeout: fallback,
+        functionName: id,
+      );
+    } on CoreDisconnectedException {
+      return fallback();
+    }
+  }
+
+  void _invokeAndForget(ActionMethod method, {dynamic data}) {
+    invoke(method: method, data: data).then<void>(
+      (_) {},
+      onError: (Object e) => commonPrint.debug('${method.name} ignored: $e'),
     );
   }
 
@@ -209,11 +284,47 @@ abstract class ClashHandlerInterface with ClashInterface {
   }
 
   @override
-  FutureOr<String> validateConfig(String data, {String? ageSecretKey}) {
-    final params = {'data': data, 'age-secret-key': ageSecretKey ?? ''};
+  FutureOr<String> validateConfig(
+    String data, {
+    String? ageSecretKey,
+    SetupParams? setup,
+  }) {
+    final params = {
+      'data': data,
+      'age-secret-key': ageSecretKey ?? '',
+      'setup': ?setup,
+    };
     return invoke<String>(
       method: ActionMethod.validateConfig,
       data: json.encode(params),
+    );
+  }
+
+  @override
+  Future<Result> getRuntimeConfig(SetupParams setupParams) {
+    return invoke<Result>(
+      method: ActionMethod.getRuntimeConfig,
+      data: json.encode(setupParams),
+      timeout: const Duration(seconds: 60),
+      defaultValue: Result.success(''),
+    );
+  }
+
+  @override
+  Future<Result> exportConfig(
+    String path,
+    String output, {
+    String? ageSecretKey,
+  }) {
+    return invoke<Result>(
+      method: ActionMethod.exportConfig,
+      data: json.encode({
+        'path': path,
+        'age-secret-key': ageSecretKey ?? '',
+        'output': output,
+      }),
+      timeout: const Duration(seconds: 60),
+      defaultValue: Result.error('exportConfig timeout'),
     );
   }
 
@@ -236,25 +347,35 @@ abstract class ClashHandlerInterface with ClashInterface {
   }
 
   @override
-  Future<Result> getConfig(String path, {String? ageSecretKey}) async {
-    final params = {'path': path, 'age-secret-key': ageSecretKey ?? ''};
+  Future<Result> getConfig(
+    String path, {
+    String? ageSecretKey,
+    List<String> disabledGroups = const [],
+  }) async {
+    final params = {
+      'path': path,
+      'age-secret-key': ageSecretKey ?? '',
+      'disabled-groups': disabledGroups,
+    };
     final res = await invoke<Result>(
       method: ActionMethod.getConfig,
       data: json.encode(params),
       timeout: const Duration(seconds: 60),
-      defaultValue: Result.success({}),
+      defaultValue: Result.success(<String, dynamic>{}),
     );
     return res;
   }
 
   @override
-  Future<String> setupConfig(SetupParams setupParams) async {
-    final data = await Isolate.run(() => json.encode(setupParams));
-    return await invoke<String>(
+  Future<SetupResult> setupConfig(SetupParams setupParams) async {
+    final params = await Isolate.run(() => json.encode(setupParams));
+    final data = await invoke<dynamic>(
       method: ActionMethod.setupConfig,
-      data: data,
-      timeout: const Duration(seconds: 60),
+      data: params,
+      timeout: const Duration(seconds: 15),
+      onTimeout: () => throw TimeoutException('setupConfig timeout'),
     );
+    return SetupResult.fromData(data);
   }
 
   @override
@@ -263,8 +384,8 @@ abstract class ClashHandlerInterface with ClashInterface {
   }
 
   @override
-  Future<Map> getProxies() {
-    return invoke<Map>(
+  Future<String> getProxies() {
+    return invoke<String>(
       method: ActionMethod.getProxies,
       timeout: Duration(seconds: 5),
     );
@@ -360,17 +481,47 @@ abstract class ClashHandlerInterface with ClashInterface {
 
   @override
   resetTraffic() {
-    invoke(method: ActionMethod.resetTraffic);
+    _invokeAndForget(ActionMethod.resetTraffic);
   }
 
   @override
   startLog() {
-    invoke(method: ActionMethod.startLog);
+    _invokeAndForget(ActionMethod.startLog);
   }
 
   @override
   stopLog() {
-    invoke<bool>(method: ActionMethod.stopLog);
+    _invokeAndForget(ActionMethod.stopLog);
+  }
+
+  @override
+  FutureOr<String> getLogs() {
+    return invoke<String>(method: ActionMethod.getLogs);
+  }
+
+  @override
+  FutureOr<bool> clearLogs() {
+    return invoke<bool>(method: ActionMethod.clearLogs);
+  }
+
+  @override
+  startTrackRequests() {
+    _invokeAndForget(ActionMethod.startTrackRequests);
+  }
+
+  @override
+  stopTrackRequests() {
+    _invokeAndForget(ActionMethod.stopTrackRequests);
+  }
+
+  @override
+  FutureOr<String> getRequests() {
+    return invoke<String>(method: ActionMethod.getRequests);
+  }
+
+  @override
+  FutureOr<bool> clearRequests() {
+    return invoke<bool>(method: ActionMethod.clearRequests);
   }
 
   @override
@@ -408,6 +559,11 @@ abstract class ClashHandlerInterface with ClashInterface {
   @override
   FutureOr<String> getMemory() {
     return invoke<String>(method: ActionMethod.getMemory);
+  }
+
+  @override
+  FutureOr<String> getCoreStatus() {
+    return invoke<String>(method: ActionMethod.getCoreStatus);
   }
 
   @override

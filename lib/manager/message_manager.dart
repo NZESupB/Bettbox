@@ -5,7 +5,7 @@ import 'package:kitony_box/common/common.dart';
 import 'package:kitony_box/models/models.dart';
 import 'package:kitony_box/widgets/fade_box.dart';
 import 'package:kitony_box/widgets/text.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class MessageManager extends StatefulWidget {
   final Widget child;

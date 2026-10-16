@@ -12,7 +12,7 @@ class ExternalControl {
   static TransportType? _transportType;
 
   static Future<void> start() async {
-    if (!system.isDesktop || _server != null) return;
+    if (!system.isDesktop || _server != null || appPath.isPortable) return;
 
     _transportType = await PlatformChecker.getRecommendedTransport();
 
@@ -21,7 +21,7 @@ class ExternalControl {
         await _startUnixSocket();
         return;
       } catch (e) {
-        commonPrint.log(
+        commonPrint.warn(
           'ExternalControl UDS bind failed, falling back to TCP: $e',
         );
       }
@@ -58,7 +58,7 @@ class ExternalControl {
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen(_handleCommand),
-      onError: (e) => commonPrint.log('ExternalControl server error: $e'),
+      onError: (e) => commonPrint.warn('ExternalControl server error: $e'),
     );
   }
 
@@ -172,7 +172,7 @@ class ExternalControl {
       case 'show':
         window?.show();
       default:
-        commonPrint.log('ExternalControl unknown command: $command');
+        commonPrint.warn('ExternalControl unknown command: $command');
     }
   }
 }

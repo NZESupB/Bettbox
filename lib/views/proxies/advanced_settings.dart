@@ -3,7 +3,7 @@ import 'package:kitony_box/enum/enum.dart';
 import 'package:kitony_box/providers/providers.dart';
 import 'package:kitony_box/state.dart';
 import 'package:kitony_box/widgets/widgets.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ProxiesAdvancedSettings extends ConsumerWidget {
@@ -11,15 +11,18 @@ class ProxiesAdvancedSettings extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 20),
-      children: generateSection(
-        items: [
-          const _NodeExclusionWithInverseItem(),
-          const _ConcurrencyLimitItem(),
-          const _HealthCheckTimeoutItem(),
-          const _DelayAnimationItem(),
-        ],
+    return ScrollEdgeRise(
+      builder: (_, rise) => ListView(
+        padding: EdgeInsets.only(top: 8 + rise, bottom: 20),
+        children: generateSection(
+          items: [
+            const _NodeExclusionWithInverseItem(),
+            const _ConcurrencyLimitItem(),
+            const _HealthCheckTimeoutItem(),
+            const _DelayAnimationItem(),
+            const _IconConfigItem(),
+          ],
+        ),
       ),
     );
   }
@@ -213,45 +216,111 @@ class _HealthCheckTimeoutItem extends ConsumerWidget {
 class _DelayAnimationItem extends ConsumerWidget {
   const _DelayAnimationItem();
 
-  String _getTextForDelayAnimation(DelayAnimationType type) {
-    return switch (type) {
-      DelayAnimationType.none => appLocalizations.noAnimation,
-      DelayAnimationType.rotatingCircle => appLocalizations.rotatingCircle,
-      DelayAnimationType.pulse => appLocalizations.pulse,
-      DelayAnimationType.spinningLines => appLocalizations.spinningLines,
-      DelayAnimationType.threeInOut => appLocalizations.threeInOut,
-      DelayAnimationType.threeBounce => appLocalizations.threeBounce,
-      DelayAnimationType.circle => appLocalizations.circle,
-      DelayAnimationType.fadingCircle => appLocalizations.fadingCircle,
-      DelayAnimationType.fadingFour => appLocalizations.fadingFour,
-      DelayAnimationType.wave => appLocalizations.wave,
-      DelayAnimationType.doubleBounce => appLocalizations.doubleBounce,
-    };
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final delayAnimation = ref.watch(
-      proxiesStyleSettingProvider.select((state) => state.delayAnimation),
+    final (delayAnimation, syncDelayAnimation) = ref.watch(
+      proxiesStyleSettingProvider.select(
+        (state) => (state.delayAnimation, state.syncDelayAnimation),
+      ),
     );
 
-    return ListItem<DelayAnimationType>.options(
+    return ListItem(
       leading: const Icon(Icons.animation),
       title: Text(appLocalizations.delayAnimation),
       subtitle: Text(appLocalizations.delayAnimationDesc),
-      delegate: OptionsDelegate(
-        title: appLocalizations.delayAnimation,
-        options: DelayAnimationType.values,
-        value: delayAnimation,
-        textBuilder: (value) => _getTextForDelayAnimation(value),
-        onChanged: (value) {
-          if (value != null) {
-            ref
-                .read(proxiesStyleSettingProvider.notifier)
-                .updateState((state) => state.copyWith(delayAnimation: value));
-          }
-        },
+      onTap: () async {
+        final value = await globalState
+            .showCommonDialog<(DelayAnimationType, bool)>(
+              child: DelayAnimationPickerDialog(
+                title: appLocalizations.delayAnimation,
+                initialValue: delayAnimation,
+                initialSync: syncDelayAnimation,
+              ),
+            );
+        if (value == null) return;
+        ref
+            .read(proxiesStyleSettingProvider.notifier)
+            .updateState(
+              (state) => state.copyWith(
+                delayAnimation: value.$1,
+                syncDelayAnimation: value.$2,
+              ),
+            );
+      },
+    );
+  }
+}
+
+class _IconConfigItem extends StatelessWidget {
+  const _IconConfigItem();
+
+  Future<void> _handleResetIconCache() async {
+    final res = await globalState.showMessage(
+      title: appLocalizations.resetIconCache,
+      message: TextSpan(text: appLocalizations.resetIconCacheDesc),
+    );
+    if (res != true) return;
+    await globalState.appController.safeRun(() async {
+      await CommonTargetIcon.clearCache();
+      globalState.showNotifier(appLocalizations.success);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListItem(
+      leading: const Icon(Icons.style_outlined),
+      title: Text(appLocalizations.iconConfiguration),
+      subtitle: Text(appLocalizations.iconConfigurationDesc),
+      onTap: () {
+        showExtend(
+          context,
+          builder: (_, type) {
+            return AdaptiveSheetScaffold(
+              type: type,
+              body: const _IconConfigView(),
+              title: appLocalizations.iconConfiguration,
+              actions: [
+                IconButton(
+                  onPressed: _handleResetIconCache,
+                  tooltip: appLocalizations.resetIconCache,
+                  icon: const Icon(Icons.cleaning_services_outlined),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _IconConfigView extends ConsumerWidget {
+  const _IconConfigView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final iconMap = ref.watch(
+      proxiesStyleSettingProvider.select((state) => state.iconMap),
+    );
+    return MapInputPage(
+      title: appLocalizations.iconConfiguration,
+      map: iconMap,
+      keyLabel: appLocalizations.regExp,
+      valueLabel: appLocalizations.icon,
+      titleBuilder: (item) => EmojiText(item.key),
+      leadingBuilder: (item) => Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: CommonTargetIcon(src: item.value, size: 42),
       ),
+      subtitleBuilder: (item) =>
+          Text(item.value, maxLines: 2, overflow: TextOverflow.ellipsis),
+      onChange: (value) {
+        ref
+            .read(proxiesStyleSettingProvider.notifier)
+            .updateState((state) => state.copyWith(iconMap: value));
+      },
     );
   }
 }

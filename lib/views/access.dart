@@ -8,9 +8,10 @@ import 'package:kitony_box/plugins/app.dart';
 import 'package:kitony_box/providers/providers.dart';
 import 'package:kitony_box/state.dart';
 import 'package:kitony_box/widgets/widgets.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 // Force refresh icon flag
 final forceRefreshIconProvider = StateProvider<bool>((ref) => false);
@@ -39,7 +40,22 @@ class _AccessViewState extends ConsumerState<AccessView>
     _updateInitList();
     _controller = ScrollController();
     WidgetsBinding.instance.addObserver(this);
-    _checkPermissionAndLoadPackages(interactive: true);
+    _prefetchPackages();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.afterRouteTransition(() {
+        if (!mounted) return;
+        _checkPermissionAndLoadPackages(interactive: true);
+      });
+    });
+  }
+
+  Future<void> _prefetchPackages() async {
+    if (ref.read(packagesProvider).isNotEmpty) return;
+    try {
+      if (!await app.hasPackageListPermission()) return;
+      await app.getPackages();
+    } catch (_) {}
   }
 
   @override
@@ -562,7 +578,12 @@ class _AccessViewState extends ConsumerState<AccessView>
                     future: _completer.future,
                     builder: (_, snapshot) {
                       if (snapshot.connectionState != ConnectionState.done) {
-                        return Center(child: CircularProgressIndicator());
+                        return const Center(
+                          child: SyncedLoading(
+                            size: 40,
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
                       }
                       if (_packageListPermissionDenied) {
                         return _buildPackageListPermissionDeniedView();
@@ -897,6 +918,7 @@ class _AccessControlPanelState extends ConsumerState<AccessControlPanel> {
   List<Widget> _buildModeSetting() {
     return generateSection(
       plain: true,
+      isFirst: true,
       title: appLocalizations.mode,
       items: [
         SingleChildScrollView(
@@ -1123,18 +1145,21 @@ class _AccessControlPanelState extends ConsumerState<AccessControlPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ..._buildModeSetting(),
-            ..._buildSortSetting(),
-            ..._buildSourceSetting(),
-            ..._buildActionSetting(),
-          ],
+    return ScrollEdgeRise(
+      builder: (_, rise) => SingleChildScrollView(
+        padding: EdgeInsets.only(top: 8 + rise),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ..._buildModeSetting(),
+              ..._buildSortSetting(),
+              ..._buildSourceSetting(),
+              ..._buildActionSetting(),
+            ],
+          ),
         ),
       ),
     );

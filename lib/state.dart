@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
@@ -14,7 +16,8 @@ import 'package:kitony_box/providers/providers.dart';
 import 'package:kitony_box/providers/state.dart' as providers_state;
 
 import 'package:kitony_box/widgets/dialog.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as flutter_riverpod;
 import 'package:material_color_utilities/palettes/core_palette.dart';
@@ -36,7 +39,22 @@ class GlobalState {
   bool isScreenOn = true;
   Timer? timer;
   Timer? groupsUpdateTimer;
-  late Config config;
+  Config? _config;
+
+  bool get hasConfig => _config != null;
+
+  Config get config =>
+      _config ??
+      Config(
+        themeProps: defaultThemeProps,
+        patchClashConfig: system.isAndroid
+            ? const ClashConfig(findProcessMode: FindProcessMode.always)
+            : defaultClashConfig,
+        networkProps: defaultNetworkProps,
+        appSetting: defaultAppSettingProps,
+      );
+
+  set config(Config value) => _config = value;
   late AppState appState;
   bool isPre = true;
   String? coreSHA256;
@@ -63,6 +81,45 @@ class GlobalState {
   final Lock _scriptEvaluateLock = Lock();
   bool isInit = false;
 
+  bool get hasMediaUnlockWidget {
+    final widgets = system.isAndroid
+        ? config.appSetting.mobileDashboardWidgets
+        : config.appSetting.desktopDashboardWidgets;
+    return widgets.contains(DashboardWidget.mediaUnlock) ||
+        widgets.contains(DashboardWidget.mediaUnlockSmall);
+  }
+
+  bool get hasNetworkDetectionWidget {
+    final widgets = system.isAndroid
+        ? config.appSetting.mobileDashboardWidgets
+        : config.appSetting.desktopDashboardWidgets;
+    return widgets.contains(DashboardWidget.networkDetection);
+  }
+
+  String getCurrentOutboundNode() {
+    final mode = config.patchClashConfig.mode;
+    if (mode == Mode.direct) {
+      return UsedProxy.DIRECT.name;
+    }
+    final profile = config.currentProfile;
+    final selectedMap = profile?.selectedMap ?? const <String, String>{};
+    final groups = appState.groups;
+    if (mode == Mode.global) {
+      var name = UsedProxy.GLOBAL.name;
+      final visited = <String>{};
+      while (visited.add(name)) {
+        final next = groups.getGroup(name)?.now ?? selectedMap[name];
+        if (next == null || next.isEmpty) break;
+        name = next;
+      }
+      return '${profile?.id}|${mode.name}|$name';
+    }
+    final selected = groups.isEmpty
+        ? selectedMap.entries.map((e) => '${e.key}:${e.value}')
+        : groups.map((g) => '${g.name}:${g.realNow}');
+    return '${profile?.id}|${mode.name}|${selected.join(';')}';
+  }
+
   bool get isStart => startTime != null && startTime!.isBeforeNow;
 
   AppController get appController => _appController!;
@@ -81,8 +138,13 @@ class GlobalState {
 
   Future<void> initApp(int version) async {
     isExiting = false;
+    if (system.isLinux && appPath.isAppImage) {
+      await appPath.ensureAppImageCoreSynced();
+    }
     coreSHA256 = const String.fromEnvironment('CORE_SHA256');
-    if (system.isWindows && (coreSHA256 == null || coreSHA256!.isEmpty)) {
+    if (system.isWindows &&
+        !kDebugMode &&
+        (coreSHA256 == null || coreSHA256!.isEmpty)) {
       coreSHA256 = await _calcCoreSHA256();
     }
     isPre = const String.fromEnvironment('APP_ENV') != 'stable';
@@ -91,7 +153,7 @@ class GlobalState {
       version: version,
       viewSize: Size.zero,
       requests: FixedList(maxLength),
-      logs: FixedList(maxLength),
+      logs: FixedList(maxLogLength),
       traffics: FixedList(30),
       totalTraffic: Traffic(),
       systemUiOverlayStyle: const SystemUiOverlayStyle(),
@@ -100,14 +162,52 @@ class GlobalState {
     await init();
   }
 
+  Future<String?> getOrCalcCoreSHA256() async {
+    if (coreSHA256 != null && coreSHA256!.isNotEmpty) return coreSHA256;
+    coreSHA256 = await _calcCoreSHA256();
+    return coreSHA256;
+  }
+
+  Future<String?> _calcNativeSHA256(String path) async {
+    try {
+      ProcessResult result;
+      if (Platform.isWindows) {
+        result = await Process.run('certutil', ['-hashfile', path, 'SHA256']);
+      } else if (Platform.isMacOS) {
+        result = await Process.run('shasum', ['-a', '256', path]);
+      } else if (Platform.isLinux) {
+        result = await Process.run('sha256sum', [path]);
+      } else {
+        return null;
+      }
+
+      if (result.exitCode != 0) return null;
+      final output = result.stdout.toString();
+      final clean = output.replaceAll(' ', '');
+      final match = RegExp(r'[0-9a-fA-F]{64}').firstMatch(clean);
+      return match?.group(0)?.toLowerCase();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String?> _calcCoreSHA256() async {
     try {
-      final file = File(appPath.corePath);
+      final path = appPath.corePath;
+      final file = File(path);
       if (!await file.exists()) return null;
-      final digest = await sha256.bind(file.openRead()).first;
-      return digest.toString();
+
+      final nativeHash = await _calcNativeSHA256(path);
+      if (nativeHash != null && nativeHash.isNotEmpty) {
+        return nativeHash;
+      }
+
+      return await Isolate.run(() async {
+        final digest = await sha256.bind(File(path).openRead()).first;
+        return digest.toString();
+      });
     } catch (e) {
-      commonPrint.log('Failed to calculate core SHA256: $e');
+      commonPrint.warn('Failed to calculate core SHA256: $e');
       return null;
     }
   }
@@ -133,10 +233,14 @@ class GlobalState {
           patchClashConfig: system.isAndroid
               ? const ClashConfig(findProcessMode: FindProcessMode.always)
               : defaultClashConfig,
-          appSetting: defaultAppSettingProps.copyWith(
-            showStartSwitch: _isAndroidTV ?? false,
-          ),
+          networkProps: defaultNetworkProps,
+          appSetting: defaultAppSettingProps,
         );
+    final scriptProps = await config.scriptProps.externalize();
+    if (scriptProps != config.scriptProps) {
+      config = config.copyWith(scriptProps: scriptProps);
+      await preferences.saveConfig(config);
+    }
     await globalState.migrateOldData(config);
     final locale =
         utils.getLocaleForString(config.appSetting.locale) ??
@@ -186,7 +290,7 @@ class GlobalState {
       try {
         await task();
       } catch (e) {
-        commonPrint.log('Background task failed: $e');
+        commonPrint.warn('Background task failed: $e');
       }
     }
     timer = null;
@@ -255,7 +359,7 @@ class GlobalState {
         startTime = null;
       }
     } catch (e) {
-      commonPrint.log('Sync VPN state error: $e');
+      commonPrint.warn('Sync VPN state error: $e');
     }
   }
 
@@ -317,6 +421,9 @@ class GlobalState {
 
     if (system.isAndroid) {
       await service?.setQuickResponse(config.vpnProps.quickResponse);
+      await service?.setHighPriorityNotification(
+        config.vpnProps.highPriorityNotification,
+      );
     }
     await startUpdateTasks(tasks);
   }
@@ -426,13 +533,11 @@ class GlobalState {
           parent: animation,
           curve: Curves.easeOutCubic,
         );
-        return RepaintBoundary(
-          child: FadeTransition(
-            opacity: curved,
-            child: ScaleTransition(
-              scale: curved.drive(Tween<double>(begin: 0.94, end: 1.0)),
-              child: child,
-            ),
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: curved.drive(Tween<double>(begin: 0.94, end: 1.0)),
+            child: RepaintBoundary(child: child),
           ),
         );
       },
@@ -540,6 +645,21 @@ class GlobalState {
       preferences.saveConfig(config);
       this.config = config;
     }
+
+    final prefs = await preferences.sharedPreferencesCompleter.future;
+    if (prefs != null && prefs.containsKey(customDashboardTitleKey)) {
+      config = config.copyWith(
+        appSetting: config.appSetting.copyWith(
+          dashboardTitle:
+              prefs.getString(customDashboardTitleKey) ??
+              config.appSetting.dashboardTitle,
+        ),
+      );
+      await preferences.saveConfig(config);
+      this.config = config;
+      await prefs.remove(customDashboardTitleKey);
+    }
+    await prefs?.remove(customSidebarIconKey);
   }
 
   CoreState getCoreState() {
@@ -552,491 +672,372 @@ class GlobalState {
     );
   }
 
-  Future<SetupParams> getSetupParams({required ClashConfig pathConfig}) async {
-    final clashConfig = await patchRawConfig(patchConfig: pathConfig);
-    final params = SetupParams(
-      config: clashConfig,
-      selectedMap: config.currentProfile?.selectedMap ?? {},
-      testUrl: config.appSetting.testUrl,
-      overrideTestUrl: config.overrideTestUrl,
-    );
-    return params;
+  Future<SetupParams> getSetupParams({required ClashConfig pathConfig}) {
+    return buildSetupParams(patchConfig: pathConfig);
   }
 
-  Future<Map<String, dynamic>> patchRawConfig({
+  Future<SetupParams> buildSetupParams({
     required ClashConfig patchConfig,
     Profile? profile,
   }) async {
     final targetProfile = profile ?? config.currentProfile;
+    final params = SetupParams(
+      selectedMap: targetProfile?.selectedMap ?? {},
+      testUrl: config.appSetting.testUrl,
+      overrideTestUrl: config.overrideTestUrl,
+    );
     if (targetProfile == null) {
-      return {};
+      return params;
     }
-    final profileId = targetProfile.id;
-    final configMap = await getProfileConfig(profileId);
-    final rawConfig = await handleEvaluate(configMap, profile: targetProfile);
-    final originalProxyGroups = rawConfig['proxy-groups'];
-
-    final realPatchConfig = patchConfig.copyWith(
-      dns: patchConfig.dns.copyWith(
-        fakeIpRangeV6: patchConfig.dns.effectiveFakeIpRangeV6(
-          ipv6Enabled: patchConfig.ipv6,
-        ),
-      ),
-      tun: patchConfig.tun.getRealTun(
-        config.networkProps.bypassPrivateRoute,
-        fakeIpRange: patchConfig.dns.fakeIpRange,
-        fakeIpRangeV6: patchConfig.dns.effectiveFakeIpRangeV6(
-          ipv6Enabled: patchConfig.ipv6,
-        ),
-        bypassPrivateRouteAddress:
-            config.networkProps.realBypassPrivateRouteAddress,
+    return params.copyWith(
+      profilePath: await appPath.getProfilePath(targetProfile.id),
+      ageSecretKey: targetProfile.ageSecretKey ?? '',
+      scriptedConfig: await _writeScriptedConfig(targetProfile),
+      patch: await buildPatchParams(
+        patchConfig: patchConfig,
+        profile: targetProfile,
       ),
     );
-    rawConfig['external-controller'] = realPatchConfig.allowLan
-        ? realPatchConfig.externalController.value.replaceAll(
-            '127.0.0.1',
-            '0.0.0.0',
-          )
-        : realPatchConfig.externalController.value;
-    if (realPatchConfig.externalController == ExternalControllerStatus.open) {
-      final secret = realPatchConfig.secret;
-      if (secret != null && secret.isNotEmpty) {
-        rawConfig['secret'] = secret;
-      }
-    }
-    rawConfig['external-ui'] = await appPath.uiPath;
-    rawConfig['external-ui-url'] =
-        'https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip';
-    rawConfig.remove('external-ui-name');
-    if (rawConfig['interface-name'] == null) {
-      rawConfig['interface-name'] = '';
-    }
-    rawConfig['tcp-concurrent'] = realPatchConfig.tcpConcurrent;
-    rawConfig['unified-delay'] = realPatchConfig.unifiedDelay;
-    rawConfig['ipv6'] = realPatchConfig.ipv6;
-    rawConfig['log-level'] = realPatchConfig.logLevel.name;
-    rawConfig['port'] = 0;
-    rawConfig['socks-port'] = 0;
-    rawConfig['keep-alive-interval'] = realPatchConfig.keepAliveInterval;
-    rawConfig['mixed-port'] = realPatchConfig.mixedPort;
-    rawConfig['port'] = realPatchConfig.port;
-    rawConfig['socks-port'] = realPatchConfig.socksPort;
-    rawConfig['redir-port'] = realPatchConfig.redirPort;
-    rawConfig['tproxy-port'] = realPatchConfig.tproxyPort;
-    rawConfig['find-process-mode'] = realPatchConfig.findProcessMode.name;
-    rawConfig['allow-lan'] = realPatchConfig.allowLan;
-    rawConfig['mode'] = realPatchConfig.mode.name;
-    if (rawConfig['tun'] == null) {
-      rawConfig['tun'] = {};
-    }
-    rawConfig['tun']['enable'] = realPatchConfig.tun.enable;
-    rawConfig['tun']['device'] = realPatchConfig.tun.device;
-    final dnsHijack = realPatchConfig.tun.dnsHijack;
-    rawConfig['tun']['dns-hijack'] = dnsHijack.isEmpty
-        ? const ['any:53']
-        : dnsHijack;
-    rawConfig['tun']['stack'] = realPatchConfig.tun.stack.name;
-    rawConfig['tun']['route-address'] = realPatchConfig.tun.routeAddress;
-    rawConfig['tun']['route-exclude-address'] =
-        realPatchConfig.tun.routeExcludeAddress;
-    rawConfig['tun']['auto-route'] = !system.isAndroid;
-    rawConfig['tun']['auto-detect-interface'] = !system.isAndroid;
-    rawConfig['tun']['strict-route'] = realPatchConfig.tun.strictRoute;
-    rawConfig['tun']['endpoint-independent-nat'] =
-        realPatchConfig.tun.endpointIndependentNat;
-    rawConfig['tun']['disable-icmp-forwarding'] =
-        realPatchConfig.tun.disableIcmpForwarding;
-    rawConfig['tun']['mtu'] = realPatchConfig.tun.mtu;
-    rawConfig['geodata-loader'] = realPatchConfig.geodataLoader.name;
-    rawConfig['geodata-mode'] = false;
-    if (rawConfig['sniffer']?['sniff'] != null) {
-      for (final value in (rawConfig['sniffer']?['sniff'] as Map).values) {
-        if (value['ports'] != null && value['ports'] is List) {
-          value['ports'] =
-              value['ports']?.map((item) => item.toString()).toList() ?? [];
-        }
-      }
-    }
-    if (rawConfig['profile'] == null) {
-      rawConfig['profile'] = {};
-    }
-    if (rawConfig['proxy-providers'] != null) {
-      final proxyProviders = rawConfig['proxy-providers'] as Map;
-      for (final key in proxyProviders.keys) {
-        final proxyProvider = proxyProviders[key];
-        if (proxyProvider['type'] != 'http') {
-          continue;
-        }
-        if (proxyProvider['url'] != null) {
-          proxyProvider['path'] = await appPath.getProvidersFilePath(
-            targetProfile.id,
-            'proxies',
-            proxyProvider['url'],
-          );
-        }
-      }
-    }
-
-    if (rawConfig['rule-providers'] != null) {
-      final ruleProviders = rawConfig['rule-providers'] as Map;
-      for (final key in ruleProviders.keys) {
-        final ruleProvider = ruleProviders[key];
-        if (ruleProvider['type'] != 'http') {
-          continue;
-        }
-        if (ruleProvider['url'] != null) {
-          ruleProvider['path'] = await appPath.getProvidersFilePath(
-            targetProfile.id,
-            'rules',
-            ruleProvider['url'],
-          );
-        }
-      }
-    }
-
-    if (rawConfig['profile']['store-selected'] == null) {
-      rawConfig['profile']['store-selected'] = true;
-    }
-    if (rawConfig['profile']['store-fake-ip'] == null) {
-      rawConfig['profile']['store-fake-ip'] = true;
-    }
-    rawConfig['geox-url'] = realPatchConfig.geoXUrl.toJson();
-    rawConfig['global-ua'] = realPatchConfig.globalUa;
-    if (rawConfig['hosts'] == null) {
-      rawConfig['hosts'] = {};
-    }
-    for (final host in realPatchConfig.hosts.entries) {
-      rawConfig['hosts'][host.key] = host.value.splitByMultipleSeparators;
-    }
-
-    rawConfig['hosts']['dns.msftncsi.com'] = [
-      '131.107.255.255',
-      'fd3e:4f5a:5b81::1',
-    ];
-
-    if (rawConfig['dns'] == null) {
-      rawConfig['dns'] = {};
-    }
-    final isEnableDns = rawConfig['dns']['enable'] == true;
-    final overrideDns = globalState.config.overrideDns;
-    if (overrideDns || !isEnableDns) {
-      final originalDns = rawConfig['dns'] is Map
-          ? (rawConfig['dns'] as Map).cast<String, dynamic>()
-          : null;
-      final originalHosts = rawConfig['hosts'] is Map
-          ? (rawConfig['hosts'] as Map).cast<String, dynamic>()
-          : null;
-      final dns = switch (!isEnableDns) {
-        true => realPatchConfig.dns.copyWith(
-          nameserver: [...realPatchConfig.dns.nameserver, 'system://'],
-        ),
-        false => realPatchConfig.dns,
-      };
-      rawConfig['dns'] = dns.toJson();
-      rawConfig['dns']['nameserver-policy'] = {};
-      for (final entry in dns.nameserverPolicy.entries) {
-        rawConfig['dns']['nameserver-policy'][entry.key] =
-            entry.value.splitByMultipleSeparators;
-      }
-      applyDnsNodeOverride(
-        rawConfig,
-        originalDns: originalDns,
-        originalHosts: originalHosts,
-      );
-    }
-
-    if (rawConfig['dns'] != null &&
-        rawConfig['dns']['fallback-filter'] != null) {
-      if (rawConfig['dns']['fallback-filter'] is Map) {
-        (rawConfig['dns']['fallback-filter'] as Map).remove('geosite');
-      }
-    }
-
-    if (system.isAndroid && rawConfig['dns']['listen'] != null) {
-      final listen = rawConfig['dns']['listen'] as String;
-      if (listen.endsWith(':53')) {
-        rawConfig['dns']['listen'] = listen.replaceAll(':53', ':10053');
-      }
-      final noProviders =
-          rawConfig['proxy-providers'] == null &&
-          rawConfig['rule-providers'] == null;
-      final proxyServerNameserver = rawConfig['dns']['proxy-server-nameserver'];
-      final hasLocalProxyServerNameserver = switch (proxyServerNameserver) {
-        List list => list.any((e) => e.toString().startsWith('127.0.0.1')),
-        String str => str.startsWith('127.0.0.1'),
-        _ => false,
-      };
-      if (noProviders &&
-          hasLocalProxyServerNameserver &&
-          listen.startsWith('0.0.0.0')) {
-        rawConfig['dns']['listen'] =
-            '127.0.0.1${listen.substring('0.0.0.0'.length)}';
-      }
-    }
-
-    if (rawConfig['ntp'] == null) {
-      rawConfig['ntp'] = {};
-    }
-    final overrideNtp = globalState.config.overrideNtp;
-    if (overrideNtp) {
-      final ntp = realPatchConfig.ntp;
-      rawConfig['ntp'] = ntp.toJson();
-    }
-    if (system.isAndroid) {
-      rawConfig['ntp']['write-to-system'] = false;
-    }
-    if (rawConfig['sniffer'] == null) {
-      rawConfig['sniffer'] = {};
-    }
-    final overrideSniffer = globalState.config.overrideSniffer;
-    if (overrideSniffer) {
-      final sniffer = realPatchConfig.sniffer;
-      rawConfig['sniffer'] = sniffer.toJson();
-    }
-    final guiTunnels = realPatchConfig.tunnels;
-    if (guiTunnels.isNotEmpty) {
-      final existingTunnels = rawConfig['tunnels'] as List? ?? [];
-      final allTunnels = [
-        ...existingTunnels,
-        ...guiTunnels.map((t) => t.toClashJson()),
-      ];
-      rawConfig['tunnels'] = allTunnels;
-    }
-    if (rawConfig['experimental'] == null) {
-      rawConfig['experimental'] = {};
-    }
-    final overrideExperimental = globalState.config.overrideExperimental;
-    if (overrideExperimental) {
-      final experimental = realPatchConfig.experimental;
-      rawConfig['experimental'] = experimental.toJson();
-    }
-
-    final nodeExcludeFilter = globalState.config.nodeExcludeFilter;
-    final healthCheckTimeout = globalState.config.healthCheckTimeout;
-    if ((nodeExcludeFilter.isNotEmpty || healthCheckTimeout != 5000) &&
-        rawConfig['proxy-groups'] is List) {
-      RegExp? filterRegex;
-      if (nodeExcludeFilter.isNotEmpty) {
-        try {
-          filterRegex = RegExp(nodeExcludeFilter);
-        } catch (_) {}
-      }
-
-      final proxyGroups = rawConfig['proxy-groups'] as List;
-
-      final Set<String> protectedNames = {
-        'DIRECT',
-        'REJECT',
-        'REJECT-DROP',
-        'COMPATIBLE',
-        'PASS',
-      };
-      for (final g in proxyGroups) {
-        if (g is Map && g['name'] is String) {
-          protectedNames.add(g['name'] as String);
-        }
-      }
-
-      for (final group in proxyGroups) {
-        if (group is! Map) continue;
-
-        if (filterRegex != null && group['use'] != null) {
-          final existing = group['exclude-filter'];
-          if (existing is String && existing.isNotEmpty) {
-            group['exclude-filter'] = '$existing|$nodeExcludeFilter';
-          } else {
-            group['exclude-filter'] = nodeExcludeFilter;
-          }
-        }
-
-        if (filterRegex != null && group['proxies'] is List) {
-          final proxiesList = group['proxies'] as List;
-          final filtered = proxiesList.where((item) {
-            if (item is! String || protectedNames.contains(item)) return true;
-            return !filterRegex!.hasMatch(item);
-          }).toList();
-
-          if (filtered.isEmpty &&
-              (group['use'] == null ||
-                  (group['use'] is List && group['use'].isEmpty))) {
-            filtered.add('DIRECT');
-          }
-          group['proxies'] = filtered;
-        }
-
-        if (healthCheckTimeout != 5000) {
-          group['timeout'] ??= healthCheckTimeout;
-        }
-      }
-
-      if (filterRegex != null && rawConfig['proxy-providers'] is Map) {
-        final proxyProviders = rawConfig['proxy-providers'] as Map;
-        for (final provider in proxyProviders.values) {
-          if (provider is! Map) continue;
-          final existing = provider['exclude-filter'];
-          if (existing is String && existing.isNotEmpty) {
-            provider['exclude-filter'] = '$existing|$nodeExcludeFilter';
-          } else {
-            provider['exclude-filter'] = nodeExcludeFilter;
-          }
-        }
-      }
-    }
-
-    if (rawConfig['proxy-groups'] is List) {
-      final proxyGroups = rawConfig['proxy-groups'] as List;
-      for (final group in proxyGroups) {
-        if (group is! Map) continue;
-        final tolerance = group['tolerance'];
-        if (tolerance != null) {
-          if (tolerance is double) {
-            group['tolerance'] = tolerance.toInt();
-          } else if (tolerance is String) {
-            group['tolerance'] = int.tryParse(tolerance) ?? tolerance;
-          }
-        }
-      }
-    }
-
-    var rules = [];
-    if (rawConfig['rules'] != null) {
-      rules = rawConfig['rules'];
-      rawConfig.remove('rules');
-    } else if (rawConfig['rule'] != null) {
-      rules = rawConfig['rule'];
-      rawConfig.remove('rule');
-    }
-
-    final scriptActive =
-        config.scriptProps.currentScript != null &&
-        targetProfile.useScriptOverride;
-
-    final overrideData = targetProfile.overrideData;
-    if (overrideData.enable && !scriptActive) {
-      if (overrideData.rule.type == OverrideRuleType.override) {
-        rules = overrideData.runningRule;
-      } else {
-        rules = [...overrideData.runningRule, ...rules];
-      }
-    }
-
-    if (config.vpnProps.disableQuic) {
-      final isRussian =
-          config.appSetting.locale?.toLowerCase().startsWith('ru') ?? false;
-      final quicRules = config.vpnProps.excludeChina && !isRussian
-          ? [
-              'AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((OR,((GEOSITE,geolocation-cn),(GEOIP,CN,no-resolve)))))),REJECT',
-            ]
-          : ['AND,((NETWORK,UDP),(DST-PORT,443)),REJECT'];
-      rules = [...quicRules, ...rules];
-    }
-
-    if (rawConfig['proxy-groups'] == null && originalProxyGroups != null) {
-      rawConfig['proxy-groups'] = originalProxyGroups;
-    }
-
-    final globalClientFingerprint = rawConfig['global-client-fingerprint'];
-    if (rawConfig['proxies'] is List) {
-      final proxiesList = rawConfig['proxies'] as List;
-      for (final proxy in proxiesList) {
-        if (proxy is! Map) continue;
-
-        final type = proxy['type']?.toString().toLowerCase();
-        final isTls = proxy['tls'] == true;
-
-        bool supportClientFingerprint = false;
-        if (type == 'trojan' || type == 'anytls') {
-          supportClientFingerprint = true;
-        } else if ((type == 'vmess' || type == 'vless') && isTls) {
-          supportClientFingerprint = true;
-        }
-
-        if (supportClientFingerprint) {
-          if (globalClientFingerprint != null &&
-              proxy['client-fingerprint'] == null) {
-            proxy['client-fingerprint'] = globalClientFingerprint;
-          }
-        }
-
-        final realityOpts = proxy['reality-opts'];
-        if (realityOpts is Map) {
-          final shortId = realityOpts['short-id'];
-          if (shortId is num) {
-            realityOpts['short-id'] = shortId.toString();
-          }
-        }
-      }
-    }
-
-    if (targetProfile.groupSwitches.isNotEmpty &&
-        !scriptActive &&
-        rawConfig['proxy-groups'] is List) {
-      final disabledGroups = targetProfile.groupSwitches.entries
-          .where((e) => !e.value)
-          .map((e) => e.key)
-          .toSet();
-      if (disabledGroups.isNotEmpty) {
-        final proxyGroups = rawConfig['proxy-groups'] as List;
-        proxyGroups.removeWhere((g) {
-          if (g is Map && g['name'] is String) {
-            return disabledGroups.contains(g['name']);
-          }
-          return false;
-        });
-        for (int i = 0; i < rules.length; i++) {
-          if (rules[i] is String) {
-            final parsed = ParsedRule.parseString(rules[i] as String);
-            if (parsed.ruleTarget != null &&
-                disabledGroups.contains(parsed.ruleTarget)) {
-              rules[i] = parsed.copyWith(ruleTarget: 'PASS').value;
-            }
-          }
-        }
-      }
-    }
-
-    rawConfig['rule'] = rules;
-    return rawConfig;
   }
 
-  Future<Map<String, dynamic>> getProfileConfig(String profileId) async {
+  Future<SetupParams?> buildValidateParams(Profile profile) async {
+    final currentProfileId = config.currentProfileId;
+    final scriptActive =
+        config.scriptProps.currentScript != null && profile.useScriptOverride;
+    if (isService ||
+        scriptActive ||
+        (currentProfileId != null && currentProfileId != profile.id)) {
+      return null;
+    }
+    final patchConfig = config.patchClashConfig;
+    return buildSetupParams(
+      patchConfig: patchConfig.copyWith.tun(
+        enable: patchConfig.tun.enable && appState.realTunEnable,
+      ),
+      profile: profile,
+    );
+  }
+
+  Future<String> getRuntimeConfigContent({
+    required ClashConfig patchConfig,
+    Profile? profile,
+  }) async {
+    return clashCore.getRuntimeConfig(
+      await buildSetupParams(patchConfig: patchConfig, profile: profile),
+    );
+  }
+
+  Future<String> validatePatchedConfig({
+    required ClashConfig patchConfig,
+  }) async {
+    return await clashCore.validateConfig(
+      '',
+      setup: await buildSetupParams(patchConfig: patchConfig),
+    );
+  }
+
+  Future<String> _writeScriptedConfig(Profile profile) async {
+    if (config.scriptProps.currentScript == null ||
+        !profile.useScriptOverride) {
+      return '';
+    }
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final relayPath = await appPath.relayPath;
+    final separator = Platform.pathSeparator;
+    final file = File('$relayPath${separator}scripted-$stamp.json');
+    return _scriptEvaluateLock.synchronized(() async {
+      final currentScript = config.scriptProps.currentScript;
+      if (currentScript == null) return '';
+      unawaited(_sweepRelay(relayPath));
+      final cache = File('$relayPath${separator}cache-${profile.id}.json');
+      final cacheKey = File('$relayPath${separator}cache-${profile.id}.key');
+      String? content;
+      var digest = currentScript.digest;
+      var volatile = currentScript.volatile;
+      if (digest == null || volatile == null) {
+        content = await currentScript.readContent();
+        digest = content.toMd5();
+        volatile = volatileScriptPattern.hasMatch(content);
+      }
+      final key = volatile
+          ? null
+          : await _scriptedCacheKey(profile, currentScript, digest);
+      final exported = File('$relayPath${separator}profile-$stamp.json');
+      try {
+        if (key != null &&
+            await cache.exists() &&
+            await cacheKey.exists() &&
+            await cacheKey.readAsString() == key) {
+          await cache.copy(file.path);
+          return file.path;
+        }
+        await _exportProfileConfig(profile, exported.path);
+        await JavaScriptRuntimeManager.evaluateScriptFile(
+          scriptContent: content ?? await currentScript.readContent(),
+          inputPath: exported.path,
+          outputPath: file.path,
+          customOptions: currentScript.customOptions,
+        );
+        if (key != null) {
+          if (await cacheKey.exists()) {
+            await cacheKey.delete();
+          }
+          await file.copy(cache.path);
+          await cacheKey.writeAsString(key, flush: true);
+        }
+        return file.path;
+      } catch (e) {
+        commonPrint.error('Script execution failed: $e');
+        showNotifier('${appLocalizations.profileParseErrorDesc}: $e');
+        return '';
+      } finally {
+        if (await exported.exists()) {
+          try {
+            await exported.delete();
+          } catch (_) {}
+        }
+      }
+    });
+  }
+
+  Future<void> _sweepRelay(String relayPath) async {
+    final expire = DateTime.now().subtract(const Duration(minutes: 10));
+    try {
+      await for (final entity in Directory(relayPath).list()) {
+        if (entity is! File ||
+            entity.uri.pathSegments.last.startsWith('cache-') ||
+            (await entity.stat()).modified.isAfter(expire)) {
+          continue;
+        }
+        await entity.delete();
+      }
+    } catch (_) {}
+  }
+
+  Future<String?> _scriptedCacheKey(
+    Profile profile,
+    Script script,
+    String digest,
+  ) async {
+    final profileFile = File(await appPath.getProfilePath(profile.id));
+    if (!await profileFile.exists()) {
+      return null;
+    }
+    final stat = await profileFile.stat();
+    return [
+      packageInfo.version,
+      packageInfo.buildNumber,
+      stat.modified.microsecondsSinceEpoch,
+      stat.size,
+      profile.ageSecretKey ?? '',
+      digest,
+      json.encode(script.customOptions ?? const <String, bool>{}),
+    ].join('\n').toMd5();
+  }
+
+  Future<void> _exportProfileConfig(Profile profile, String output) async {
+    final handler = clashLibHandler;
+    if (handler != null) {
+      return handler.exportConfig(
+        profile.id,
+        output,
+        ageSecretKey: profile.ageSecretKey,
+      );
+    }
+    return clashCore.exportConfig(
+      profile.id,
+      output,
+      ageSecretKey: profile.ageSecretKey,
+    );
+  }
+
+  Future<Map<String, dynamic>> buildPatchParams({
+    required ClashConfig patchConfig,
+    required Profile profile,
+  }) async {
+    final fakeIpRangeV6 = patchConfig.dns.effectiveFakeIpRangeV6(
+      ipv6Enabled: patchConfig.ipv6,
+    );
+    final dns = patchConfig.dns.copyWith(fakeIpRangeV6: fakeIpRangeV6);
+    final tun = patchConfig.tun.getRealTun(
+      config.networkProps.bypassPrivateRoute,
+      fakeIpRange: patchConfig.dns.fakeIpRange,
+      fakeIpRangeV6: fakeIpRangeV6,
+      bypassPrivateRouteAddress:
+          config.networkProps.realBypassPrivateRouteAddress,
+    );
+    final externalController = patchConfig.externalController;
+    final secret = patchConfig.secret;
+    final hasAuthentication = patchConfig.authentication.isNotEmpty;
+    final general = <String, dynamic>{
+      'external-controller': patchConfig.allowLan
+          ? externalController.value.replaceAll('127.0.0.1', '0.0.0.0')
+          : externalController.value,
+      if (externalController == ExternalControllerStatus.open &&
+          secret != null &&
+          secret.isNotEmpty)
+        'secret': secret,
+      'external-ui': await appPath.uiPath,
+      'external-ui-url':
+          'https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip',
+      'external-ui-name': '',
+      'tcp-concurrent': patchConfig.tcpConcurrent,
+      'unified-delay': patchConfig.unifiedDelay,
+      'ipv6': patchConfig.ipv6,
+      'log-level': patchConfig.logLevel.name,
+      'keep-alive-interval': patchConfig.keepAliveInterval,
+      'mixed-port': patchConfig.mixedPort,
+      'port': patchConfig.port,
+      'socks-port': patchConfig.socksPort,
+      'redir-port': patchConfig.redirPort,
+      'tproxy-port': patchConfig.tproxyPort,
+      'find-process-mode': patchConfig.findProcessMode.name,
+      'allow-lan': patchConfig.allowLan,
+      'authentication': patchConfig.authentication,
+      'skip-auth-prefixes':
+          hasAuthentication && patchConfig.skipAuthPrefixes.isNotEmpty
+          ? patchConfig.skipAuthPrefixes
+          : null,
+      'mode': patchConfig.mode.name,
+      'tun': {
+        'enable': tun.enable,
+        'device': tun.device,
+        'dns-hijack': tun.dnsHijack.isEmpty ? const ['any:53'] : tun.dnsHijack,
+        'stack': tun.stack.name,
+        'congestion-controller': tun.congestionController.name,
+        'route-address': tun.routeAddress,
+        'route-exclude-address': tun.routeExcludeAddress,
+        'auto-route': !system.isAndroid,
+        'auto-detect-interface': !system.isAndroid,
+        'auto-redirect': system.isLinux,
+        'strict-route': tun.strictRoute,
+        'endpoint-independent-nat': tun.endpointIndependentNat,
+        'disable-icmp-forwarding': tun.disableIcmpForwarding,
+        'mtu': tun.mtu,
+      },
+      'geodata-loader': 'memconservative',
+      'geodata-mode': false,
+      'global-ua': patchConfig.globalUa,
+    };
+
+    final scriptActive =
+        config.scriptProps.currentScript != null && profile.useScriptOverride;
+    final overrideData = profile.overrideData;
+    final isRussian =
+        config.appSetting.locale?.toLowerCase().startsWith('ru') ?? false;
+    final isChinese =
+        config.appSetting.locale?.toLowerCase().startsWith('zh') ?? false;
+    final listenPorts = patchConfig.listenPorts;
+
+    return {
+      'general': general,
+      'geox-url': patchConfig.geoXUrl.toJson(),
+      'hosts': [
+        for (final host in patchConfig.hosts.entries)
+          if (system.isAndroid || host.key != 'services.googleapis.cn')
+            {'key': host.key, 'value': host.value.splitByMultipleSeparators},
+        {
+          'key': 'dns.msftncsi.com',
+          'value': ['131.107.255.255', 'fd3e:4f5a:5b81::1'],
+        },
+      ],
+      'override-dns': config.overrideDns,
+      'dns-node-override': isChinese,
+      'dns': {
+        ...dns.toJson(),
+        'nameserver-policy': {
+          for (final entry in dns.nameserverPolicy.entries)
+            entry.key: entry.value.splitByMultipleSeparators,
+        },
+      },
+      'ntp': config.overrideNtp ? patchConfig.ntp.toJson() : null,
+      'sniffer': config.overrideSniffer ? patchConfig.sniffer.toJson() : null,
+      'experimental': config.overrideExperimental
+          ? patchConfig.experimental.toJson()
+          : null,
+      'tunnels': patchConfig.tunnels.isEmpty
+          ? null
+          : patchConfig.tunnels.map((item) => item.toClashJson()).toList(),
+      'providers-path': await appPath.getProvidersDirPath(profile.id),
+      'node-exclude-filter': config.nodeExcludeFilter,
+      'health-check-timeout': config.healthCheckTimeout,
+      'override-rules': overrideData.enable
+          ? {
+              'override': overrideData.rule.type == OverrideRuleType.override,
+              'rules': overrideData.runningRule,
+            }
+          : null,
+      'prepend-rules': [
+        if (config.vpnProps.loopbackProtection) ...[
+          if (listenPorts.isNotEmpty) ...[
+            'AND,((DST-PORT,$listenPorts),(IP-CIDR,127.0.0.0/8,no-resolve)),REJECT',
+            'AND,((DST-PORT,$listenPorts),(IP-CIDR6,::1/128,no-resolve)),REJECT',
+          ],
+          if (system.isAndroid)
+            'AND,((DST-PORT,853),(IP-CIDR,198.51.100.0/30,no-resolve)),REJECT',
+        ],
+        if (config.vpnProps.disableQuic)
+          config.vpnProps.excludeChina && !isRussian
+              ? 'AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((OR,((GEOSITE,geolocation-cn),(GEOIP,CN,no-resolve)))))),REJECT'
+              : 'AND,((NETWORK,UDP),(DST-PORT,443)),REJECT',
+      ],
+      'disabled-groups': scriptActive
+          ? const []
+          : [
+              for (final entry in profile.groupSwitches.entries)
+                if (!entry.value) entry.key,
+            ],
+      'select-global': profile.selectedMap['GLOBAL'] == null,
+    };
+  }
+
+  Future<Map<String, dynamic>?> _readScriptedConfig(Profile profile) async {
+    final path = await _writeScriptedConfig(profile);
+    if (path.isEmpty) return null;
+    final file = File(path);
+    try {
+      final content = await file.readAsString();
+      return await Isolate.run(
+        () => Map<String, dynamic>.from(json.decode(content) as Map),
+      );
+    } finally {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> getProfileConfig(
+    String profileId, {
+    bool effective = false,
+  }) async {
     final profile = config.profiles.getProfile(profileId);
+    if (effective && profile != null) {
+      final scripted = await _readScriptedConfig(profile);
+      if (scripted != null) return scripted;
+    }
     final ageSecretKey = profile?.ageSecretKey;
+    final disabledGroups = effective && profile != null
+        ? [
+            for (final entry in profile.groupSwitches.entries)
+              if (!entry.value) entry.key,
+          ]
+        : const <String>[];
     final configMap = await switch (clashLibHandler != null) {
-      true => clashLibHandler!.getConfig(profileId, ageSecretKey: ageSecretKey),
-      false => clashCore.getConfig(profileId, ageSecretKey: ageSecretKey),
+      true => clashLibHandler!.getConfig(
+        profileId,
+        ageSecretKey: ageSecretKey,
+        disabledGroups: disabledGroups,
+      ),
+      false => clashCore.getConfig(
+        profileId,
+        ageSecretKey: ageSecretKey,
+        disabledGroups: disabledGroups,
+      ),
     };
     configMap['rules'] = configMap['rule'];
     configMap.remove('rule');
     return configMap;
-  }
-
-  Future<Map<String, dynamic>> handleEvaluate(
-    Map<String, dynamic> config, {
-    Profile? profile,
-  }) async {
-    return _scriptEvaluateLock.synchronized(() async {
-      final currentScript = globalState.config.scriptProps.currentScript;
-      if (currentScript == null) return config;
-
-      if (profile != null && !profile.useScriptOverride) return config;
-
-      config['proxy-providers'] ??= {};
-
-      try {
-        return await JavaScriptRuntimeManager.evaluateScript(
-          currentScript.content,
-          config,
-          customOptions: currentScript.customOptions,
-        );
-      } catch (e) {
-        commonPrint.log('Script execution failed: $e');
-        globalState.showNotifier(
-          '${appLocalizations.profileParseErrorDesc}: $e',
-        );
-        return config;
-      }
-    });
   }
 }
 
@@ -1051,6 +1052,8 @@ class DashboardRefreshManager {
   final tick5s = ValueNotifier<int>(0);
 
   bool get isRunning => _isRunning;
+
+  Future<bool> isActive() => _isActive();
 
   Future<bool> _isActive() async {
     if (system.isDesktop) {
@@ -1071,7 +1074,16 @@ class DashboardRefreshManager {
     if (lifecycleState != null && lifecycleState != AppLifecycleState.resumed) {
       return false;
     }
+
+    if (globalState.appState.pageLabel != PageLabel.dashboard) {
+      return false;
+    }
+
     return true;
+  }
+
+  void triggerImmediateTick() {
+    _tryTick(_tickToken);
   }
 
   Future<void> _tryTick(int token) async {
@@ -1118,6 +1130,10 @@ class DetectionState {
   bool _isIpMasked = false;
   IpInfo? _rawIpInfo;
   bool _isFirstLaunch = true;
+  String? _lastCheckedOutboundNode;
+  String? _pendingCheckKey;
+  bool _recheckOnFailure = false;
+  bool _pendingInit = false;
 
   final state = ValueNotifier<NetworkDetectionState>(
     const NetworkDetectionState(
@@ -1157,12 +1173,13 @@ class DetectionState {
       ipInfo: null,
       errorMessage: null,
     );
-    startCheck(immediate: true, showLoading: true);
+    startCheck(immediate: true, showLoading: true, force: true);
   }
 
   void _onIpProgress(int requestId, IpInfo info) {
     if (requestId != _requestId) return;
     _rawIpInfo = info;
+    _lastCheckedOutboundNode = globalState.getCurrentOutboundNode();
     state.value = state.value.copyWith(
       isLoading: false,
       ipInfo: _maskIpInfo(_rawIpInfo),
@@ -1194,13 +1211,18 @@ class DetectionState {
     _handleResponse(res);
   }
 
-  void startCheck({bool immediate = false, bool showLoading = false}) {
+  void startCheck({
+    bool immediate = false,
+    bool showLoading = false,
+    bool force = false,
+  }) {
     final appState = globalState.appState;
-    if (!appState.isInit) return;
-
-    if (showLoading || state.value.ipInfo == null) {
-      state.value = state.value.copyWith(isLoading: true, errorMessage: null);
+    if (!appState.isInit) {
+      _pendingInit = true;
+      return;
     }
+
+    state.value = state.value.copyWith(isLoading: true, errorMessage: null);
 
     final delay = immediate
         ? Duration.zero
@@ -1208,12 +1230,23 @@ class DetectionState {
 
     debouncer.call(
       FunctionTag.checkIp,
-      () => _checkIp(showLoading: showLoading),
+      () => _checkIp(showLoading: showLoading, force: force),
       duration: delay,
     );
   }
 
+  void flushPendingCheck() {
+    if (!_pendingInit) return;
+    _pendingInit = false;
+    debouncer.call(
+      FunctionTag.checkIp,
+      _checkIp,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
   void tryStartCheck() {
+    if (!globalState.hasNetworkDetectionWidget) return;
     if (!state.value.isLoading &&
         state.value.ipInfo == null &&
         (_preIsStart == null || state.value.errorMessage != null)) {
@@ -1221,9 +1254,22 @@ class DetectionState {
     }
   }
 
+  void checkOnForegroundResume() {
+    if (!globalState.hasNetworkDetectionWidget) return;
+    final currentNode = globalState.getCurrentOutboundNode();
+    if (state.value.ipInfo != null &&
+        _lastCheckedOutboundNode == currentNode &&
+        state.value.errorMessage == null) {
+      return;
+    }
+    _lastCheckedOutboundNode = currentNode;
+    startCheck(showLoading: state.value.ipInfo == null);
+  }
+
   void _cancelPreviousRequest() {
     _cancelToken?.cancel();
     _cancelToken = null;
+    _pendingCheckKey = null;
   }
 
   void _handleResponse(Result<IpInfo?> res) {
@@ -1249,7 +1295,8 @@ class DetectionState {
     }
 
     if (res.data != null) {
-      _rawIpInfo ??= res.data;
+      _rawIpInfo = res.data;
+      _lastCheckedOutboundNode = globalState.getCurrentOutboundNode();
     }
     state.value = state.value.copyWith(
       isLoading: false,
@@ -1262,12 +1309,17 @@ class DetectionState {
     );
   }
 
-  Future<void> _checkIp({bool showLoading = false}) async {
+  Future<void> _checkIp({bool showLoading = false, bool force = false}) async {
     final appState = globalState.appState;
 
     if (!appState.isInit) return;
 
     final isStart = appState.runTime != null;
+    final checkKey = '$isStart|${globalState.getCurrentOutboundNode()}';
+    if (!force && _pendingCheckKey == checkKey) {
+      _recheckOnFailure = true;
+      return;
+    }
 
     final isStateChanged = _preIsStart != isStart;
     _preIsStart = isStart;
@@ -1281,6 +1333,8 @@ class DetectionState {
 
     _cancelPreviousRequest();
     _cancelToken = CancelToken();
+    _pendingCheckKey = checkKey;
+    _recheckOnFailure = false;
     final requestId = ++_requestId;
 
     final shouldShowLoading =
@@ -1294,7 +1348,7 @@ class DetectionState {
       );
     }
 
-    final timeout = const Duration(seconds: 5);
+    final timeout = const Duration(seconds: 8);
 
     final res = isStart
         ? await request.checkIp(
@@ -1309,21 +1363,386 @@ class DetectionState {
           );
 
     if (requestId != _requestId) return;
+    _pendingCheckKey = null;
 
-    if (_isFirstLaunch && (res.isError || res.data == null)) {
-      _isFirstLaunch = false;
-      _handleResponse(res);
+    final isFailed = res.isError || res.data == null;
+    final isFirstLaunch = _isFirstLaunch;
+    _isFirstLaunch = false;
+    _handleResponse(res);
+    if (!isFailed) return;
 
+    if (_recheckOnFailure) {
+      startCheck();
+      return;
+    }
+    if (isFirstLaunch) {
       Future.delayed(const Duration(seconds: 3), () {
         if (state.value.ipInfo == null && !state.value.isLoading) {
           startCheck();
         }
       });
-    } else {
-      _isFirstLaunch = false;
-      _handleResponse(res);
     }
   }
 }
 
 final detectionState = DetectionState();
+
+class MediaUnlockStateNotifier {
+  static MediaUnlockStateNotifier? _instance;
+  final _checker = MediaUnlockChecker();
+  int _requestId = 0;
+  Timer? _nodeChangeTimer;
+  static const _nodeChangeDelay = Duration(milliseconds: 800);
+  String? _lastCheckedOutboundNode;
+  bool? _preIsStart;
+
+  final state = ValueNotifier<MediaUnlockState>(const MediaUnlockState());
+  final Set<MediaPlatform> _batchTestingPlatforms = {};
+
+  bool isBatchChecking([Iterable<MediaPlatform>? platforms]) {
+    if (state.value.isLoading) return true;
+    if (platforms == null) {
+      return state.value.testingPlatforms.any(_batchTestingPlatforms.contains);
+    }
+    return platforms.any(
+      (p) =>
+          state.value.testingPlatforms.contains(p) &&
+          _batchTestingPlatforms.contains(p),
+    );
+  }
+
+  MediaUnlockStateNotifier._internal();
+
+  factory MediaUnlockStateNotifier() {
+    _instance ??= MediaUnlockStateNotifier._internal();
+    return _instance!;
+  }
+
+  List<MediaPlatform> get pinnedPlatforms {
+    final pinned = globalState.config.appSetting.pinnedMediaPlatforms;
+    return (pinned.isNotEmpty ? pinned : defaultPinnedMediaPlatforms)
+        .take(3)
+        .toList();
+  }
+
+  void checkSingle(MediaPlatform platform) async {
+    _batchTestingPlatforms.remove(platform);
+    if (state.value.testingPlatforms.contains(platform)) return;
+    final currentTesting = Set<MediaPlatform>.from(state.value.testingPlatforms)
+      ..add(platform);
+    state.value = state.value.copyWith(testingPlatforms: currentTesting);
+
+    try {
+      final res = await _checker
+          .checkPlatform(platform)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () => MediaUnlockResult(
+              platform: platform,
+              status: MediaUnlockStatus.failed,
+            ),
+          );
+      final finalMap = Map<MediaPlatform, MediaUnlockResult>.from(
+        state.value.results,
+      );
+      finalMap[platform] = res;
+      state.value = state.value.copyWith(
+        results: finalMap,
+        lastChecked: DateTime.now(),
+      );
+    } catch (_) {
+      final finalMap = Map<MediaPlatform, MediaUnlockResult>.from(
+        state.value.results,
+      );
+      finalMap.putIfAbsent(
+        platform,
+        () => MediaUnlockResult(
+          platform: platform,
+          status: MediaUnlockStatus.failed,
+        ),
+      );
+      state.value = state.value.copyWith(
+        results: finalMap,
+        lastChecked: DateTime.now(),
+      );
+    } finally {
+      final nextTesting = Set<MediaPlatform>.from(state.value.testingPlatforms)
+        ..remove(platform);
+      state.value = state.value.copyWith(testingPlatforms: nextTesting);
+    }
+  }
+
+  void checkPlatforms(
+    List<MediaPlatform> platforms, {
+    bool force = false,
+    bool isFullCheck = false,
+    bool isBatchCheck = false,
+  }) async {
+    final isRunning = globalState.appState.runTime != null;
+    if (!isRunning && !force) return;
+
+    if (force) {
+      _checker.cancel();
+    }
+
+    final targetPlatforms = force
+        ? platforms.toList()
+        : platforms
+              .where((p) => !state.value.testingPlatforms.contains(p))
+              .toList();
+    if (targetPlatforms.isEmpty) return;
+
+    final requestId = ++_requestId;
+    if (isBatchCheck) {
+      _batchTestingPlatforms.addAll(targetPlatforms);
+    }
+    final pendingTesting = Set<MediaPlatform>.from(state.value.testingPlatforms)
+      ..addAll(targetPlatforms);
+
+    state.value = state.value.copyWith(
+      isLoading: isFullCheck ? true : state.value.isLoading,
+      testingPlatforms: pendingTesting,
+    );
+
+    Timer? throttleTimer;
+    final bufferResults = <MediaPlatform, MediaUnlockResult>{};
+
+    void flushUpdates() {
+      throttleTimer?.cancel();
+      throttleTimer = null;
+      if (bufferResults.isEmpty) return;
+      final updates = Map<MediaPlatform, MediaUnlockResult>.from(bufferResults);
+      bufferResults.clear();
+      final nextResults = Map<MediaPlatform, MediaUnlockResult>.from(
+        state.value.results,
+      )..addAll(updates);
+      final nextTesting = Set<MediaPlatform>.from(state.value.testingPlatforms)
+        ..removeAll(updates.keys);
+      state.value = state.value.copyWith(
+        results: nextResults,
+        testingPlatforms: nextTesting,
+      );
+    }
+
+    try {
+      final results = await _checker
+          .checkAll(
+            platforms: targetPlatforms,
+            onProgress: (res) {
+              if (requestId != _requestId) return;
+              bufferResults[res.platform] = res;
+              throttleTimer ??= Timer(
+                const Duration(milliseconds: 100),
+                flushUpdates,
+              );
+            },
+          )
+          .timeout(
+            Duration(seconds: (targetPlatforms.length / 8).ceil() * 8 + 5),
+            onTimeout: () {
+              _checker.cancel();
+              final timeoutMap = <MediaPlatform, MediaUnlockResult>{};
+              for (final p in targetPlatforms) {
+                timeoutMap[p] =
+                    bufferResults[p] ??
+                    state.value.results[p] ??
+                    MediaUnlockResult(
+                      platform: p,
+                      status: MediaUnlockStatus.failed,
+                    );
+              }
+              return timeoutMap;
+            },
+          );
+      if (requestId != _requestId) return;
+      flushUpdates();
+      final nextResults = Map<MediaPlatform, MediaUnlockResult>.from(
+        state.value.results,
+      );
+      for (final p in targetPlatforms) {
+        nextResults[p] =
+            results[p] ??
+            bufferResults[p] ??
+            state.value.results[p] ??
+            MediaUnlockResult(platform: p, status: MediaUnlockStatus.failed);
+      }
+      _lastCheckedOutboundNode = globalState.getCurrentOutboundNode();
+      state.value = state.value.copyWith(
+        isLoading: isFullCheck ? false : state.value.isLoading,
+        results: nextResults,
+        lastChecked: DateTime.now(),
+      );
+    } catch (_) {
+      throttleTimer?.cancel();
+      if (requestId != _requestId) return;
+      flushUpdates();
+      final fallbackResults = Map<MediaPlatform, MediaUnlockResult>.from(
+        state.value.results,
+      );
+      for (final p in targetPlatforms) {
+        fallbackResults.putIfAbsent(
+          p,
+          () =>
+              MediaUnlockResult(platform: p, status: MediaUnlockStatus.failed),
+        );
+      }
+      _lastCheckedOutboundNode = globalState.getCurrentOutboundNode();
+      state.value = state.value.copyWith(
+        isLoading: isFullCheck ? false : state.value.isLoading,
+        results: fallbackResults,
+        lastChecked: DateTime.now(),
+      );
+    } finally {
+      throttleTimer?.cancel();
+      _batchTestingPlatforms.removeAll(targetPlatforms);
+      final nextTesting = Set<MediaPlatform>.from(state.value.testingPlatforms)
+        ..removeAll(targetPlatforms);
+      state.value = state.value.copyWith(
+        isLoading: (requestId == _requestId && isFullCheck)
+            ? false
+            : state.value.isLoading,
+        testingPlatforms: nextTesting,
+      );
+    }
+  }
+
+  void checkPinned({bool force = false, List<MediaPlatform>? platforms}) {
+    checkPlatforms(platforms ?? pinnedPlatforms, force: force);
+  }
+
+  void checkAll({bool force = false, List<MediaPlatform>? platforms}) {
+    final showMoreStreaming =
+        globalState.config.appSetting.mediaUnlockMoreStreamingPlatforms;
+    final allAvailable = MediaPlatform.values
+        .where((p) => showMoreStreaming || !moreStreamingPlatforms.contains(p))
+        .toList();
+    final targets = platforms ?? allAvailable;
+    final isFull = targets.length >= allAvailable.length;
+    checkPlatforms(
+      targets,
+      force: force,
+      isFullCheck: isFull,
+      isBatchCheck: true,
+    );
+  }
+
+  void startCheckOnNodeChange() async {
+    final isRunning = globalState.appState.runTime != null;
+    if (!isRunning) {
+      _preIsStart = false;
+      _nodeChangeTimer?.cancel();
+      return;
+    }
+    final isStartup = _preIsStart != true;
+    _preIsStart = true;
+
+    if (!globalState.hasMediaUnlockWidget) return;
+    if (!globalState.config.appSetting.mediaUnlockRefreshOnNodeChange) return;
+
+    if (isStartup) {
+      _nodeChangeTimer?.cancel();
+      _checker.cancel();
+      final requestId = ++_requestId;
+
+      if (globalState.hasNetworkDetectionWidget) {
+        var waited = 0;
+        while (detectionState.state.value.isLoading &&
+            waited < 6000 &&
+            globalState.appState.runTime != null &&
+            requestId == _requestId) {
+          await Future.delayed(const Duration(milliseconds: 150));
+          waited += 150;
+        }
+      } else {
+        await Future.delayed(const Duration(seconds: 2));
+      }
+      if (requestId != _requestId || globalState.appState.runTime == null) {
+        return;
+      }
+      final nextResults = Map<MediaPlatform, MediaUnlockResult>.from(
+        state.value.results,
+      );
+      for (final p in pinnedPlatforms) {
+        nextResults.remove(p);
+      }
+      state.value = state.value.copyWith(
+        results: nextResults,
+        testingPlatforms: {},
+        isLoading: false,
+      );
+      _lastCheckedOutboundNode = globalState.getCurrentOutboundNode();
+      checkPinned(force: true);
+      return;
+    }
+
+    _nodeChangeTimer?.cancel();
+    _nodeChangeTimer = Timer(_nodeChangeDelay, () {
+      if (globalState.appState.runTime == null) return;
+      if (globalState.backgroundMode.value) return;
+
+      final currentNode = globalState.getCurrentOutboundNode();
+      if (_lastCheckedOutboundNode == currentNode &&
+          state.value.results.isNotEmpty) {
+        return;
+      }
+      _lastCheckedOutboundNode = currentNode;
+      final nextResults = Map<MediaPlatform, MediaUnlockResult>.from(
+        state.value.results,
+      );
+      for (final p in pinnedPlatforms) {
+        nextResults.remove(p);
+      }
+      state.value = state.value.copyWith(
+        results: nextResults,
+        testingPlatforms: {},
+        isLoading: false,
+      );
+      checkPinned(force: true);
+    });
+  }
+
+  void checkOnForegroundResume() {
+    final isRunning = globalState.appState.runTime != null;
+    if (!isRunning) return;
+    if (!globalState.hasMediaUnlockWidget) return;
+    if (!globalState.config.appSetting.mediaUnlockRefreshOnNodeChange) return;
+    if (state.value.isLoading || state.value.testingPlatforms.isNotEmpty) {
+      return;
+    }
+    final currentNode = globalState.getCurrentOutboundNode();
+    if (state.value.results.isNotEmpty &&
+        _lastCheckedOutboundNode == currentNode) {
+      return;
+    }
+    _lastCheckedOutboundNode = currentNode;
+    final nextResults = Map<MediaPlatform, MediaUnlockResult>.from(
+      state.value.results,
+    );
+    for (final p in pinnedPlatforms) {
+      nextResults.remove(p);
+    }
+    state.value = state.value.copyWith(
+      results: nextResults,
+      testingPlatforms: {},
+      isLoading: false,
+    );
+    checkPinned(force: true);
+  }
+
+  void tryStartCheck() {
+    final isRunning = globalState.appState.runTime != null;
+    if (!isRunning) return;
+    if (!globalState.hasMediaUnlockWidget) return;
+    if (state.value.isLoading || state.value.testingPlatforms.isNotEmpty) {
+      return;
+    }
+    if (state.value.results.isNotEmpty) return;
+    final needsInitialCheck = pinnedPlatforms.any(
+      (p) => !state.value.results.containsKey(p),
+    );
+    if (!needsInitialCheck) return;
+    checkPinned();
+  }
+}
+
+final mediaUnlockState = MediaUnlockStateNotifier();

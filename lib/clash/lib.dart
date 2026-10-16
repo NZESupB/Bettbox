@@ -29,20 +29,23 @@ class ClashLib extends ClashHandlerInterface with AndroidClashInterface {
     return _canSendCompleter.future;
   }
 
+  bool _isListening = false;
+
   Future<void> _initService() async {
     _registerMainPort(receiverPort.sendPort);
-    receiverPort.listen((message) {
-      if (message is SendPort) {
-        if (_canSendCompleter.isCompleted) {
-          sendPort = null;
-          _canSendCompleter = Completer();
+    if (!_isListening) {
+      _isListening = true;
+      receiverPort.listen((message) {
+        if (message is SendPort) {
+          sendPort = message;
+          if (!_canSendCompleter.isCompleted) {
+            _canSendCompleter.complete(true);
+          }
+        } else {
+          handleResult(ActionResult.fromJson(json.decode(message)));
         }
-        sendPort = message;
-        _canSendCompleter.complete(true);
-      } else {
-        handleResult(ActionResult.fromJson(json.decode(message)));
-      }
-    });
+      });
+    }
     final alreadyRunning = await service?.isServiceEngineRunning() ?? false;
     if (alreadyRunning) {
       await service?.reconnectIpc();
@@ -54,19 +57,21 @@ class ClashLib extends ClashHandlerInterface with AndroidClashInterface {
   }
 
   Future<void> _waitForIpc() async {
-    for (var attempt = 0; attempt < 3; attempt++) {
+    for (var attempt = 1; ; attempt++) {
+      if (sendPort != null && _canSendCompleter.isCompleted) return;
       final connected = await _canSendCompleter.future.timeout(
         const Duration(seconds: 2),
         onTimeout: () => false,
       );
-      if (connected) return;
-      commonPrint.log(
-        'ClashLib: IPC attempt ${attempt + 1}/3 failed, retrying...',
-      );
-      _canSendCompleter = Completer();
+      if (connected && sendPort != null) return;
+      if (attempt <= 3) {
+        commonPrint.warn('ClashLib: IPC attempt $attempt failed, retrying...');
+      }
+      if (_canSendCompleter.isCompleted) {
+        _canSendCompleter = Completer();
+      }
       await service?.reconnectIpc();
     }
-    commonPrint.log('ClashLib: IPC failed after 3 attempts');
   }
 
   void _registerMainPort(SendPort sendPort) {
@@ -99,17 +104,25 @@ class ClashLib extends ClashHandlerInterface with AndroidClashInterface {
 
   @override
   sendMessage(String message) async {
-    await _canSendCompleter.future;
+    final canSend = await _canSendCompleter.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => false,
+    );
+    if (!canSend || sendPort == null) {
+      commonPrint.error('ClashLib: IPC not ready after 5s');
+      throw TimeoutException('Android IPC SendPort unavailable');
+    }
     try {
       sendPort?.send(message);
     } catch (e) {
-      commonPrint.log('ClashLib: sendMessage failed: $e, reconnecting IPC');
+      commonPrint.warn('ClashLib: sendMessage failed: $e, reconnecting IPC');
       sendPort = null;
       _canSendCompleter = Completer();
       await service?.reconnectIpc();
       await _waitForIpc();
       sendPort?.send(message);
     }
+    return null;
   }
 
   // @override
@@ -152,7 +165,7 @@ class ClashLibHandler {
   late final DynamicLibrary lib;
 
   ClashLibHandler._internal() {
-    lib = DynamicLibrary.open('libclash.so');
+    lib = DynamicLibrary.open('libmeta.so');
     clashFFI = ClashFFI(lib);
     clashFFI.initNativeApiBridge(NativeApi.initializeApiDLData);
   }
@@ -175,6 +188,28 @@ class ClashLibHandler {
     clashFFI.invokeAction(actionParamsChar, receiver.sendPort.nativePort);
     malloc.free(actionParamsChar);
     return completer.future;
+  }
+
+  Future<void> exportConfig(
+    String id,
+    String output, {
+    String? ageSecretKey,
+  }) async {
+    final action = Action(
+      id: '${ActionMethod.exportConfig.name}#${utils.id}',
+      method: ActionMethod.exportConfig,
+      data: json.encode({
+        'path': await appPath.getProfilePath(id),
+        'age-secret-key': ageSecretKey ?? '',
+        'output': output,
+      }),
+    );
+    final result = ActionResult.fromJson(
+      json.decode(await invokeAction(json.encode(action))),
+    ).toResult;
+    if (result.isError) {
+      throw result.message;
+    }
   }
 
   void attachMessagePort(int messagePort) {
@@ -246,9 +281,14 @@ class ClashLibHandler {
   Future<Map<String, dynamic>> getConfig(
     String id, {
     String? ageSecretKey,
+    List<String> disabledGroups = const [],
   }) async {
     final path = await appPath.getProfilePath(id);
-    final params = {'path': path, 'age-secret-key': ageSecretKey ?? ''};
+    final params = {
+      'path': path,
+      'age-secret-key': ageSecretKey ?? '',
+      'disabled-groups': disabledGroups,
+    };
     return using((arena) {
       final pathChar = json
           .encode(params)
@@ -258,24 +298,30 @@ class ClashLibHandler {
       if (configRaw == nullptr) return <String, dynamic>{};
       try {
         final configString = configRaw.cast<Utf8>().toDartString();
-        if (configString.isEmpty) return <String, dynamic>{};
-        return json.decode(configString) as Map<String, dynamic>;
+        final decoded = json.decode(configString);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+        return <String, dynamic>{};
       } finally {
         clashFFI.freeCString(configRaw);
       }
     });
   }
 
-  Future<String> quickStart(
+  Future<SetupResult> quickStart(
     InitParams initParams,
     SetupParams setupParams,
     CoreState state,
   ) {
-    final completer = Completer<String>();
+    final completer = Completer<SetupResult>();
     final receiver = ReceivePort();
     receiver.listen((message) {
       if (!completer.isCompleted) {
-        completer.complete(message);
+        dynamic data = message;
+        try {
+          data = json.decode(message);
+        } catch (_) {}
+        completer.complete(SetupResult.fromData(data));
         receiver.close();
       }
     });

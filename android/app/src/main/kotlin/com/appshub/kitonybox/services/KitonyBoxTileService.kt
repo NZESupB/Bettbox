@@ -6,16 +6,24 @@ import android.service.quicksettings.TileService
 import androidx.annotation.RequiresApi
 import com.appshub.kitonybox.GlobalState
 import com.appshub.kitonybox.RunState
+import com.appshub.kitonybox.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.N)
 class KitonyBoxTileService : TileService() {
+
+    companion object {
+        @Volatile
+        private var activeInstance: KitonyBoxTileService? = null
+
+        fun refreshActive() {
+            activeInstance?.updateTile(GlobalState.currentRunState)
+        }
+    }
 
     private var scope: CoroutineScope? = null
 
@@ -29,7 +37,7 @@ class KitonyBoxTileService : TileService() {
             if (GlobalState.isSpeedNotificationEnabled && GlobalState.currentProfileName.isNotEmpty()) {
                 label = GlobalState.currentProfileName
             } else {
-                label = "KitonyBox"
+                label = getString(R.string.kitony_box)
             }
             updateTile()
         }
@@ -37,17 +45,17 @@ class KitonyBoxTileService : TileService() {
 
     override fun onStartListening() {
         super.onStartListening()
+        activeInstance = this
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         GlobalState.syncStatus()
-        updateTile(GlobalState.currentRunState)
         scope?.launch {
-            GlobalState.runState.onEach { updateTile(it) }.launchIn(this)
+            GlobalState.runState.collect { updateTile(it) }
         }
     }
 
     override fun onStopListening() {
-        if (GlobalState.currentRunState == RunState.PENDING) {
-            GlobalState.syncStatus()
+        if (activeInstance === this) {
+            activeInstance = null
         }
         scope?.cancel()
         scope = null
@@ -64,6 +72,9 @@ class KitonyBoxTileService : TileService() {
     }
 
     override fun onDestroy() {
+        if (activeInstance === this) {
+            activeInstance = null
+        }
         scope?.cancel()
         scope = null
         super.onDestroy()
